@@ -6,5 +6,5 @@
     "outDir": "./dist",
     "noEmit": false
   },
-  "include": ["src", "api"]
+  "include": ["src", "api", "prisma", "prisma.config.ts"]
 }
