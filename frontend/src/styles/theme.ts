@@ -51,6 +51,7 @@ export const lightTheme = {
     holidayBorder: '#fecaca',
     addButtonBorder: '#d1d5db',
     addButtonText: '#6b7280',
+    overlay: 'rgba(0, 0, 0, 0.4)',
   },
 };
 
@@ -81,6 +82,7 @@ export const darkTheme = {
     holidayBorder: '#5a3030',
     addButtonBorder: '#3a3a3a',
     addButtonText: '#a1a1aa',
+    overlay: 'rgba(0, 0, 0, 0.6)',
   },
 };
 

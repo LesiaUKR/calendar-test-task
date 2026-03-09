@@ -5,6 +5,7 @@ import styled from '@emotion/styled';
 import type { PublicHoliday } from '../../services/holidayService';
 import { formatDateKey } from '../../utils/calendar';
 import { HolidayBadge } from './HolidayBadge';
+import { TaskCard } from './TaskCard';
 
 interface DayCellProps {
   date: Date;
@@ -12,6 +13,8 @@ interface DayCellProps {
   isToday: boolean;
   tasks: Task[];
   holidays: PublicHoliday[];
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
   onAddTask: (dateKey: string) => void;
 }
 
@@ -101,7 +104,16 @@ const AddButton = styled.button`
   }
 `;
 
-export function DayCell({ date, isBoundary, isToday, tasks, holidays, onAddTask }: DayCellProps) {
+export function DayCell({
+  date,
+  isBoundary,
+  isToday,
+  tasks,
+  holidays,
+  onAddTask,
+  onEdit,
+  onDelete,
+}: DayCellProps) {
   const dateKey = formatDateKey(date);
   const dayNumber = date.getDate();
   const taskIds = tasks.map(t => t.id);
@@ -127,7 +139,9 @@ export function DayCell({ date, isBoundary, isToday, tasks, holidays, onAddTask 
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <TasksContainer>
-          {/* TaskCard components will be rendered here in Issue #13 */}
+          {tasks.map(task => (
+            <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
+          ))}
         </TasksContainer>
       </SortableContext>
 

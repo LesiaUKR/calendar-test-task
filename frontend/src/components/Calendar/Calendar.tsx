@@ -1,13 +1,17 @@
+import type { Priority, Task } from '@calendar/shared';
 import styled from '@emotion/styled';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useCalendar } from '../../hooks/useCalendar';
 import { useHolidays } from '../../hooks/useHolidays';
 import type { Country } from '../../services/holidayService';
-import { useAppSelector } from '../../store';
+import { useAppDispatch, useAppSelector } from '../../store';
+import { createTask, deleteTask, fetchTasks, updateTask } from '../../store/tasksSlice';
 import { formatDateKey } from '../../utils/calendar';
 import { CalendarHeader } from './CalendarHeader';
 import { DayCell } from './DayCell';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { EditTaskModal } from './EditTaskModal';
 
 interface CalendarProps {
   isDark: boolean;
@@ -39,6 +43,11 @@ const WeekdayCell = styled.div`
   letter-spacing: 0.05em;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
+
+  &:last-of-type {
+    border-right: none;
+  }
 `;
 
 const formatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
@@ -56,6 +65,12 @@ export function Calendar({
   const { grid, currentMonth, currentYear } = useCalendar();
   const holidays = useHolidays(currentYear, country);
   const tasks = useAppSelector(state => state.tasks.tasks);
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    const month = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    dispatch(fetchTasks(month));
+  }, [dispatch, currentYear, currentMonth]);
 
   const tasksByDate = useMemo(() => {
     const map = new Map<string, typeof tasks>();
@@ -67,9 +82,43 @@ export function Calendar({
     return map;
   }, [tasks]);
 
-  const handleAddTask = useCallback((_dateKey: string) => {
-    // Will open EditTaskModal in Issue #13
+  const [editingState, setEditingState] = useState<{ task: Task | null; dateKey: string } | null>(
+    null
+  );
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+
+  const handleAddTask = useCallback((dateKey: string) => {
+    setEditingState({ task: null, dateKey });
   }, []);
+
+  const handleEdit = useCallback((task: Task) => {
+    setEditingState({ task, dateKey: task.date });
+  }, []);
+
+  const handleDelete = useCallback((task: Task) => {
+    setDeletingTask(task);
+  }, []);
+
+  const handleSave = useCallback(
+    (data: { title: string; priority?: Priority; labels: string[] }, taskId?: string) => {
+      if (taskId) {
+        dispatch(updateTask({ id: taskId, ...data }));
+      } else if (editingState?.dateKey) {
+        const tasksForDate = tasksByDate.get(editingState.dateKey) ?? [];
+        dispatch(createTask({ ...data, date: editingState.dateKey, order: tasksForDate.length }));
+      }
+      setEditingState(null);
+    },
+    [dispatch, editingState?.dateKey, tasksByDate]
+  );
+
+  const handleConfirmDelete = useCallback(
+    (taskId: string) => {
+      dispatch(deleteTask(taskId));
+      setDeletingTask(null);
+    },
+    [dispatch]
+  );
 
   return (
     <>
@@ -100,12 +149,30 @@ export function Calendar({
                   tasks={tasksByDate.get(key) ?? []}
                   holidays={holidays.get(key) ?? []}
                   onAddTask={handleAddTask}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               );
             })
           )}
         </Grid>
       </Wrapper>
+      {editingState && (
+        <EditTaskModal
+          task={editingState.task}
+          dateKey={editingState.dateKey}
+          onSave={handleSave}
+          onClose={() => setEditingState(null)}
+        />
+      )}
+
+      {deletingTask && (
+        <DeleteConfirmModal
+          task={deletingTask}
+          onConfirm={handleConfirmDelete}
+          onClose={() => setDeletingTask(null)}
+        />
+      )}
     </>
   );
 }
