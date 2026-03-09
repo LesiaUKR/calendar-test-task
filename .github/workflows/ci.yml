@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build shared types
+        run: npx tsc -b shared
+        
       - name: Lint
         run: npm run lint
 
