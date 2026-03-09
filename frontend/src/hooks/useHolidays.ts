@@ -25,10 +25,11 @@ export function useHolidays(year: number, countryCode: string) {
         const map: HolidayMap = new Map();
         for (const h of data) {
           const existing = map.get(h.date) ?? [];
-          existing.push(h);
+          if (!existing.some(e => e.name === h.name)) {
+            existing.push(h);
+          }
           map.set(h.date, existing);
         }
-
         cacheRef.current.set(cacheKey, map);
         setHolidays(map);
       })

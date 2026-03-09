@@ -1,10 +1,12 @@
 import type { Task } from '@calendar/shared';
+import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import styled from '@emotion/styled';
 
 import type { PublicHoliday } from '../../services/holidayService';
 import { formatDateKey } from '../../utils/calendar';
 import { HolidayBadge } from './HolidayBadge';
+import { TaskCard } from './TaskCard';
 
 interface DayCellProps {
   date: Date;
@@ -12,12 +14,14 @@ interface DayCellProps {
   isToday: boolean;
   tasks: Task[];
   holidays: PublicHoliday[];
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
   onAddTask: (dateKey: string) => void;
 }
 
 const Cell = styled.div<{ isBoundary: boolean; isToday: boolean }>`
-  min-height: 120px;
   padding: ${({ theme }) => theme.spacing.sm};
+  overflow: hidden;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme, isToday, isBoundary }) =>
@@ -77,7 +81,7 @@ const TasksContainer = styled.div`
 `;
 
 const AddButton = styled.button`
-  margin-top: auto;
+  margin-top: ${({ theme }) => theme.spacing.xs};
   padding: ${({ theme }) => theme.spacing.xs};
   border: 1px dashed ${({ theme }) => theme.colors.addButtonBorder};
   border-radius: ${({ theme }) => theme.borderRadius};
@@ -101,13 +105,36 @@ const AddButton = styled.button`
   }
 `;
 
-export function DayCell({ date, isBoundary, isToday, tasks, holidays, onAddTask }: DayCellProps) {
+const MoreLink = styled.span`
+  font-size: ${({ theme }) => theme.font.size.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin-top: ${({ theme }) => theme.spacing.xs};
+  cursor: default;
+`;
+
+export function DayCell({
+  date,
+  isBoundary,
+  isToday,
+  tasks,
+  holidays,
+  onAddTask,
+  onEdit,
+  onDelete,
+}: DayCellProps) {
+  const MAX_VISIBLE = 2;
   const dateKey = formatDateKey(date);
   const dayNumber = date.getDate();
-  const taskIds = tasks.map(t => t.id);
+  const visibleTasks = tasks.slice(0, MAX_VISIBLE);
+  const hiddenCount = tasks.length - visibleTasks.length;
+  const taskIds = visibleTasks.map(t => t.id);
+
+  const { setNodeRef: setDroppableRef } = useDroppable({
+    id: `droppable-${dateKey}`,
+  });
 
   return (
-    <Cell isBoundary={isBoundary} isToday={isToday}>
+    <Cell ref={setDroppableRef} isBoundary={isBoundary} isToday={isToday}>
       <Header>
         {isToday && !isBoundary ? (
           <TodayBadge>{dayNumber}</TodayBadge>
@@ -127,9 +154,13 @@ export function DayCell({ date, isBoundary, isToday, tasks, holidays, onAddTask 
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <TasksContainer>
-          {/* TaskCard components will be rendered here in Issue #13 */}
+          {visibleTasks.map(task => (
+            <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
+          ))}
         </TasksContainer>
       </SortableContext>
+
+      {hiddenCount > 0 && <MoreLink>+{hiddenCount} more</MoreLink>}
 
       {!isBoundary && (
         <AddButton onClick={() => onAddTask(dateKey)} aria-label={`Add task for ${dateKey}`}>

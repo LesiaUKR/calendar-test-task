@@ -16,16 +16,16 @@ const shared = {
     },
   },
   borderRadius: '6px',
-  priority: {
-    LOW: '#22c55e',
-    MEDIUM: '#f59e0b',
-    HIGH: '#f97316',
-    URGENT: '#ef4444',
-  },
 };
 
 export const lightTheme = {
   ...shared,
+  priority: {
+    LOW: { color: '#2e7d32', bg: '#e8f5e9' },
+    MEDIUM: { color: '#e65100', bg: '#fff3e0' },
+    HIGH: { color: '#c62828', bg: '#ffebee' },
+    URGENT: { color: '#ad1457', bg: '#fce4ec' },
+  },
   colors: {
     background: '#ffffff',
     surface: '#f5f5f5',
@@ -40,6 +40,7 @@ export const lightTheme = {
     inputBg: '#ffffff',
     inputBorder: '#d1d5db',
     cardBg: '#ffffff',
+    cardBorder: '#e5e7eb',
     cardShadow: '0 1px 3px rgba(0,0,0,0.08)',
     holidayBg: '#fef2f2',
     holidayText: '#dc2626',
@@ -51,11 +52,18 @@ export const lightTheme = {
     holidayBorder: '#fecaca',
     addButtonBorder: '#d1d5db',
     addButtonText: '#6b7280',
+    overlay: 'rgba(0, 0, 0, 0.4)',
   },
 };
 
 export const darkTheme = {
   ...shared,
+  priority: {
+    LOW: { color: '#4ade80', bg: '#1a3a1a' },
+    MEDIUM: { color: '#fbbf24', bg: '#3a2a1a' },
+    HIGH: { color: '#fb923c', bg: '#3a1a1a' },
+    URGENT: { color: '#fb7185', bg: '#4a1a2a' },
+  },
   colors: {
     background: '#121212',
     surface: '#1e1e1e',
@@ -70,6 +78,7 @@ export const darkTheme = {
     inputBg: '#2a2a2a',
     inputBorder: '#3a3a3a',
     cardBg: '#2a2a2a',
+    cardBorder: 'transparent',
     cardShadow: '0 1px 3px rgba(0,0,0,0.3)',
     holidayBg: '#3a2020',
     holidayText: '#fca5a5',
@@ -81,6 +90,7 @@ export const darkTheme = {
     holidayBorder: '#5a3030',
     addButtonBorder: '#3a3a3a',
     addButtonText: '#a1a1aa',
+    overlay: 'rgba(0, 0, 0, 0.6)',
   },
 };
 
