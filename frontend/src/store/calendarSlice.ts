@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 const now = new Date();
 
@@ -32,8 +32,14 @@ const calendarSlice = createSlice({
         state.currentMonth += 1;
       }
     },
+    setMonth(state, action: PayloadAction<number>) {
+      state.currentMonth = action.payload;
+    },
+    setYear(state, action: PayloadAction<number>) {
+      state.currentYear = action.payload;
+    },
   },
 });
 
-export const { prevMonth, nextMonth } = calendarSlice.actions;
+export const { prevMonth, nextMonth, setMonth, setYear } = calendarSlice.actions;
 export default calendarSlice.reducer;

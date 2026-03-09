@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { useAppDispatch, useAppSelector } from '../store';
-import { nextMonth, prevMonth } from '../store/calendarSlice';
+import { nextMonth, prevMonth, setMonth, setYear } from '../store/calendarSlice';
 import { buildCalendarGrid } from '../utils/calendar';
 
 const monthYearFormatter = new Intl.DateTimeFormat('en-US', {
@@ -26,6 +26,17 @@ export function useCalendar() {
 
   const goToPrevMonth = useCallback(() => dispatch(prevMonth()), [dispatch]);
   const goToNextMonth = useCallback(() => dispatch(nextMonth()), [dispatch]);
+  const setCalendarMonth = useCallback((month: number) => dispatch(setMonth(month)), [dispatch]);
+  const setCalendarYear = useCallback((year: number) => dispatch(setYear(year)), [dispatch]);
 
-  return { grid, currentYear, currentMonth, currentLabel, goToPrevMonth, goToNextMonth };
+  return {
+    grid,
+    currentYear,
+    currentMonth,
+    currentLabel,
+    goToPrevMonth,
+    goToNextMonth,
+    setCalendarMonth,
+    setCalendarYear,
+  };
 }

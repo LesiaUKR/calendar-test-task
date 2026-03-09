@@ -1,6 +1,10 @@
+import { ThemeProvider } from '@emotion/react';
 import styled from '@emotion/styled';
+import { useCallback, useState } from 'react';
 
 import { Calendar } from './components/Calendar/Calendar';
+import { useCountries } from './hooks/useCountries';
+import { darkTheme, lightTheme } from './styles/theme';
 
 const Container = styled.div`
   max-width: 1400px;
@@ -10,9 +14,22 @@ const Container = styled.div`
 `;
 
 export const App = () => {
+  const [isDark, setIsDark] = useState(false);
+  const { countries, country, setCountry } = useCountries();
+
+  const toggleTheme = useCallback(() => setIsDark(prev => !prev), []);
+
   return (
-    <Container>
-      <Calendar />
-    </Container>
+    <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+      <Container>
+        <Calendar
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+          countries={countries}
+          country={country}
+          onCountryChange={setCountry}
+        />
+      </Container>
+    </ThemeProvider>
   );
 };

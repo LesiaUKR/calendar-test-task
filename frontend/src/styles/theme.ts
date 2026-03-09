@@ -37,6 +37,16 @@ export const lightTheme = {
     today: '#eff6ff',
     boundary: '#9ca3af',
     error: '#ef4444',
+    inputBg: '#ffffff',
+    inputBorder: '#d1d5db',
+    cardBg: '#ffffff',
+    cardShadow: '0 1px 3px rgba(0,0,0,0.08)',
+    holidayBg: '#fef2f2',
+    holidayText: '#dc2626',
+    deleteHover: '#ef4444',
+    surfaceHover: '#e8eaed',
+    headerBg: '#fafbfc',
+    borderLight: '#dde1e6',
   },
 };
 
@@ -53,6 +63,16 @@ export const darkTheme = {
     today: '#1e2a3a',
     boundary: '#52525b',
     error: '#f87171',
+    inputBg: '#2a2a2a',
+    inputBorder: '#3a3a3a',
+    cardBg: '#2a2a2a',
+    cardShadow: '0 1px 3px rgba(0,0,0,0.3)',
+    holidayBg: '#3a2020',
+    holidayText: '#fca5a5',
+    deleteHover: '#dc2626',
+    surfaceHover: '#2a2a2a',
+    headerBg: '#181818',
+    borderLight: '#3a3a3a',
   },
 };
 
