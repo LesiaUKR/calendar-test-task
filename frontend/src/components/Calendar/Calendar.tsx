@@ -1,10 +1,13 @@
-import { css, Global } from '@emotion/react';
 import styled from '@emotion/styled';
+import { useCallback, useMemo } from 'react';
 
 import { useCalendar } from '../../hooks/useCalendar';
+import { useHolidays } from '../../hooks/useHolidays';
 import type { Country } from '../../services/holidayService';
+import { useAppSelector } from '../../store';
 import { formatDateKey } from '../../utils/calendar';
 import { CalendarHeader } from './CalendarHeader';
+import { DayCell } from './DayCell';
 
 interface CalendarProps {
   isDark: boolean;
@@ -38,29 +41,6 @@ const WeekdayCell = styled.div`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-const Cell = styled.div<{ isBoundary: boolean; isToday: boolean }>`
-  min-height: 120px;
-  padding: ${({ theme }) => theme.spacing.sm};
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme, isToday, isBoundary }) =>
-    isToday ? theme.colors.today : isBoundary ? theme.colors.surface : theme.colors.background};
-  opacity: ${({ isBoundary }) => (isBoundary ? 0.5 : 1)};
-  pointer-events: ${({ isBoundary }) => (isBoundary ? 'none' : 'auto')};
-  touch-action: manipulation;
-
-  &:nth-of-type(7n + 7) {
-    border-right: none;
-  }
-`;
-
-const DateNumber = styled.span`
-  font-variant-numeric: tabular-nums;
-  font-size: ${({ theme }) => theme.font.size.md};
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
 const formatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
 const WEEKDAYS = Array.from({ length: 7 }, (_, i) => formatter.format(new Date(2024, 0, 7 + i)));
 
@@ -73,19 +53,26 @@ export function Calendar({
   country,
   onCountryChange,
 }: CalendarProps) {
-  const { grid, currentMonth } = useCalendar();
+  const { grid, currentMonth, currentYear } = useCalendar();
+  const holidays = useHolidays(currentYear, country);
+  const tasks = useAppSelector(state => state.tasks.tasks);
+
+  const tasksByDate = useMemo(() => {
+    const map = new Map<string, typeof tasks>();
+    for (const task of tasks) {
+      const existing = map.get(task.date) ?? [];
+      existing.push(task);
+      map.set(task.date, existing);
+    }
+    return map;
+  }, [tasks]);
+
+  const handleAddTask = useCallback((_dateKey: string) => {
+    // Will open EditTaskModal in Issue #13
+  }, []);
 
   return (
     <>
-      <Global
-        styles={css`
-          body {
-            margin: 0;
-            background: ${isDark ? '#121212' : '#ffffff'};
-            transition: background 0.2s;
-          }
-        `}
-      />
       <CalendarHeader
         isDark={isDark}
         onToggleTheme={onToggleTheme}
@@ -105,9 +92,15 @@ export function Calendar({
               const isToday = key === todayKey;
 
               return (
-                <Cell key={key} isBoundary={isBoundary} isToday={isToday}>
-                  <DateNumber>{date.getDate()}</DateNumber>
-                </Cell>
+                <DayCell
+                  key={key}
+                  date={date}
+                  isBoundary={isBoundary}
+                  isToday={isToday}
+                  tasks={tasksByDate.get(key) ?? []}
+                  holidays={holidays.get(key) ?? []}
+                  onAddTask={handleAddTask}
+                />
               );
             })
           )}

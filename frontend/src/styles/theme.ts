@@ -47,6 +47,10 @@ export const lightTheme = {
     surfaceHover: '#e8eaed',
     headerBg: '#fafbfc',
     borderLight: '#dde1e6',
+    todayBadge: '#3b82f6',
+    holidayBorder: '#fecaca',
+    addButtonBorder: '#d1d5db',
+    addButtonText: '#6b7280',
   },
 };
 
@@ -73,6 +77,10 @@ export const darkTheme = {
     surfaceHover: '#2a2a2a',
     headerBg: '#181818',
     borderLight: '#3a3a3a',
+    todayBadge: '#60a5fa',
+    holidayBorder: '#5a3030',
+    addButtonBorder: '#3a3a3a',
+    addButtonText: '#a1a1aa',
   },
 };
 

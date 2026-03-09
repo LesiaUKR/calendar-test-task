@@ -4,13 +4,13 @@ import { useCallback, useState } from 'react';
 
 import { Calendar } from './components/Calendar/Calendar';
 import { useCountries } from './hooks/useCountries';
+import { GlobalStyles } from './styles/GlobalStyles';
 import { darkTheme, lightTheme } from './styles/theme';
 
 const Container = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   padding: ${({ theme }) => theme.spacing.lg};
-  font-family: ${({ theme }) => theme.font.family};
 `;
 
 export const App = () => {
@@ -21,6 +21,7 @@ export const App = () => {
 
   return (
     <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+      <GlobalStyles />
       <Container>
         <Calendar
           isDark={isDark}
