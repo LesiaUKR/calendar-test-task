@@ -1,4 +1,5 @@
 import type { Task } from '@calendar/shared';
+import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import styled from '@emotion/styled';
 
@@ -19,8 +20,8 @@ interface DayCellProps {
 }
 
 const Cell = styled.div<{ isBoundary: boolean; isToday: boolean }>`
-  min-height: 120px;
   padding: ${({ theme }) => theme.spacing.sm};
+  overflow: hidden;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme, isToday, isBoundary }) =>
@@ -80,7 +81,7 @@ const TasksContainer = styled.div`
 `;
 
 const AddButton = styled.button`
-  margin-top: auto;
+  margin-top: ${({ theme }) => theme.spacing.xs};
   padding: ${({ theme }) => theme.spacing.xs};
   border: 1px dashed ${({ theme }) => theme.colors.addButtonBorder};
   border-radius: ${({ theme }) => theme.borderRadius};
@@ -104,6 +105,13 @@ const AddButton = styled.button`
   }
 `;
 
+const MoreLink = styled.span`
+  font-size: ${({ theme }) => theme.font.size.sm};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin-top: ${({ theme }) => theme.spacing.xs};
+  cursor: default;
+`;
+
 export function DayCell({
   date,
   isBoundary,
@@ -114,12 +122,19 @@ export function DayCell({
   onEdit,
   onDelete,
 }: DayCellProps) {
+  const MAX_VISIBLE = 2;
   const dateKey = formatDateKey(date);
   const dayNumber = date.getDate();
-  const taskIds = tasks.map(t => t.id);
+  const visibleTasks = tasks.slice(0, MAX_VISIBLE);
+  const hiddenCount = tasks.length - visibleTasks.length;
+  const taskIds = visibleTasks.map(t => t.id);
+
+  const { setNodeRef: setDroppableRef } = useDroppable({
+    id: `droppable-${dateKey}`,
+  });
 
   return (
-    <Cell isBoundary={isBoundary} isToday={isToday}>
+    <Cell ref={setDroppableRef} isBoundary={isBoundary} isToday={isToday}>
       <Header>
         {isToday && !isBoundary ? (
           <TodayBadge>{dayNumber}</TodayBadge>
@@ -139,11 +154,13 @@ export function DayCell({
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <TasksContainer>
-          {tasks.map(task => (
+          {visibleTasks.map(task => (
             <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </TasksContainer>
       </SortableContext>
+
+      {hiddenCount > 0 && <MoreLink>+{hiddenCount} more</MoreLink>}
 
       {!isBoundary && (
         <AddButton onClick={() => onAddTask(dateKey)} aria-label={`Add task for ${dateKey}`}>

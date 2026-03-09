@@ -50,6 +50,18 @@ const Message = styled.p`
   line-height: 1.5;
 `;
 
+const TaskNameRow = styled.span`
+  display: flex;
+  justify-content: center;
+`;
+
+const TaskName = styled.strong`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
 const Footer = styled.div`
   display: flex;
   justify-content: center;
@@ -105,8 +117,11 @@ export function DeleteConfirmModal({ task, onConfirm, onClose }: DeleteConfirmMo
         <Title>Delete Task</Title>
 
         <Message>
-          Are you sure you want to delete <strong>&ldquo;{task.title}&rdquo;</strong>? This action
-          cannot be undone.
+          <span>Are you sure you want to delete</span>
+          <TaskNameRow>
+            <TaskName>&ldquo;{task.title}&rdquo;</TaskName> ?
+          </TaskNameRow>
+          <span>This action cannot be undone.</span>
         </Message>
 
         <Footer>

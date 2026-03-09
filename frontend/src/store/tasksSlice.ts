@@ -1,5 +1,5 @@
 import type { CreateTaskDto, ReorderItem, Task, UpdateTaskDto } from '@calendar/shared';
-import { createAsyncThunk, createSelector, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 import api from '../services/taskService';
 
@@ -46,7 +46,17 @@ export const reorderTasks = createAsyncThunk('tasks/reorderTasks', async (items:
 const tasksSlice = createSlice({
   name: 'tasks',
   initialState,
-  reducers: {},
+  reducers: {
+    optimisticReorder(state, action: PayloadAction<ReorderItem[]>) {
+      for (const item of action.payload) {
+        const task = state.tasks.find(t => t.id === item.id);
+        if (task) {
+          task.date = item.date;
+          task.order = item.order;
+        }
+      }
+    },
+  },
   extraReducers: builder => {
     builder
       .addCase(fetchTasks.pending, state => {
@@ -71,13 +81,17 @@ const tasksSlice = createSlice({
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.tasks = state.tasks.filter(t => t.id !== action.payload);
       })
-      .addCase(reorderTasks.fulfilled, (state, action) => {
-        state.tasks = action.payload;
+      .addCase(reorderTasks.fulfilled, () => {
+        // state already updated optimistically
+      })
+      .addCase(reorderTasks.rejected, (state, action) => {
+        state.error = action.error.message ?? 'Failed to reorder tasks';
       });
   },
 });
 
 export default tasksSlice.reducer;
+export const { optimisticReorder } = tasksSlice.actions;
 
 export const selectFilteredTasks = createSelector(
   [

@@ -210,7 +210,7 @@ export function EditTaskModal({ task, dateKey: _dateKey, onSave, onClose }: Edit
               <PriorityButton
                 key={p}
                 active={priority === p}
-                priorityColor={theme.priority[p]}
+                priorityColor={theme.priority[p].color}
                 onClick={() => setPriority(prev => (prev === p ? undefined : p))}
               >
                 {p}
