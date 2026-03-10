@@ -74,7 +74,11 @@ const Button = styled.button`
   font-size: ${({ theme }) => theme.font.size.md};
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 `;
 
 const CancelButton = styled(Button)`

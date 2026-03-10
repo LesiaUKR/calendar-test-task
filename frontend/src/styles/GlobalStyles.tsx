@@ -8,10 +8,33 @@ export function GlobalStyles() {
       styles={css`
         body {
           margin: 0;
-          background: ${theme.colors.background};
+          background-color: ${theme.colors.background};
           font-family: ${theme.font.family};
           color: ${theme.colors.text};
-          transition: background 0.2s;
+          transition:
+            background-color 200ms ease,
+            color 200ms ease,
+            border-color 200ms ease,
+            box-shadow 200ms ease;
+        }
+
+        *,
+        *::before,
+        *::after {
+          transition:
+            background-color 200ms ease,
+            color 200ms ease,
+            border-color 200ms ease,
+            box-shadow 200ms ease;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *,
+          *::before,
+          *::after {
+            transition: none !important;
+            animation: none !important;
+          }
         }
       `}
     />

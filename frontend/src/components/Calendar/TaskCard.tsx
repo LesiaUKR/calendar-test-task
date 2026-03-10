@@ -8,17 +8,21 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  forceDraggingCursor?: boolean;
 }
 
-const Card = styled.div`
+const Card = styled.div<{ isDragging: boolean }>`
   background: ${({ theme }) => theme.colors.cardBg};
   border: 1px solid ${({ theme }) => theme.colors.cardBorder};
   box-shadow: ${({ theme }) => theme.colors.cardShadow};
   border-radius: ${({ theme }) => theme.borderRadius};
   padding: ${({ theme }) => theme.spacing.sm};
   overflow: hidden;
-  cursor: grab;
+  cursor: ${({ isDragging }) => (isDragging ? 'grabbing' : 'grab')};
   touch-action: manipulation;
+
+  flex-shrink: 0;
+  min-height: 64px;
 
   &:active {
     cursor: grabbing;
@@ -48,11 +52,12 @@ const LabelBar = styled.div<{ color: string }>`
 const Title = styled.span`
   display: block;
   font-size: ${({ theme }) => theme.font.size.sm};
+  line-height: 1.35;
   color: ${({ theme }) => theme.colors.text};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: pointer;
+  cursor: inherit;
 `;
 
 const PriorityBadge = styled.span<{ priority: string }>`
@@ -115,7 +120,7 @@ const DeleteButton = styled(ActionButton)`
   }
 `;
 
-export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onDelete, forceDraggingCursor = false }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
@@ -127,7 +132,13 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
   };
 
   return (
-    <Card ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <Card
+      ref={setNodeRef}
+      style={style}
+      isDragging={isDragging || forceDraggingCursor}
+      {...attributes}
+      {...listeners}
+    >
       <TopRow>
         <Labels>
           {task.labels.map(color => (
