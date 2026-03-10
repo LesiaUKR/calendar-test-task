@@ -1,17 +1,26 @@
 import type { Priority, Task } from '@calendar/shared';
 import { useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
+import { Check } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+
+import { LABEL_COLORS, PRIORITY_VALUES } from '../../constants/taskMeta';
 
 interface EditTaskModalProps {
   task: Task | null;
   dateKey: string;
-  onSave: (data: { title: string; priority?: Priority; labels: string[] }, taskId?: string) => void;
+  onSave: (
+    data: {
+      title: string;
+      priority?: Priority;
+      labels: string[];
+      description?: string;
+      date?: string;
+    },
+    taskId?: string
+  ) => void;
   onClose: () => void;
 }
-
-const LABEL_COLORS = ['#34d399', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'];
-const PRIORITIES: Priority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
 
 const Backdrop = styled.div`
   position: fixed;
@@ -57,6 +66,26 @@ const Input = styled.input`
   font-size: ${({ theme }) => theme.font.size.md};
   outline: none;
   box-sizing: border-box;
+
+  &:focus {
+    border-color: ${({ theme }) => theme.colors.accent};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent}33;
+  }
+`;
+
+const Textarea = styled.textarea`
+  width: 100%;
+  min-height: 92px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.inputBorder};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme }) => theme.colors.inputBg};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: ${({ theme }) => theme.font.size.md};
+  outline: none;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: inherit;
 
   &:focus {
     border-color: ${({ theme }) => theme.colors.accent};
@@ -110,6 +139,10 @@ const LabelSwatch = styled.button<{ swatchColor: string; selected: boolean }>`
   cursor: pointer;
   outline-offset: 2px;
   opacity: ${({ selected }) => (selected ? 1 : 0.5)};
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     opacity 150ms ease,
     border-color 150ms ease,
@@ -118,6 +151,27 @@ const LabelSwatch = styled.button<{ swatchColor: string; selected: boolean }>`
   &:hover {
     opacity: 1;
   }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px ${({ theme }) => `${theme.colors.accent}33`};
+  }
+`;
+
+const CheckBadge = styled.span`
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+`;
+
+const CheckIcon = styled(Check)`
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
 `;
 
 const Footer = styled.div`
@@ -174,6 +228,8 @@ export function EditTaskModal({ task, dateKey: _dateKey, onSave, onClose }: Edit
   const [title, setTitle] = useState(task?.title ?? '');
   const [priority, setPriority] = useState<Priority | undefined>(task?.priority ?? undefined);
   const [labels, setLabels] = useState<string[]>(task?.labels ?? []);
+  const [description, setDescription] = useState(task?.description ?? '');
+  const [date, setDate] = useState(task?.date ?? '');
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -194,7 +250,16 @@ export function EditTaskModal({ task, dateKey: _dateKey, onSave, onClose }: Edit
   const handleSave = () => {
     const trimmed = title.trim();
     if (!trimmed) return;
-    onSave({ title: trimmed, priority, labels }, task?.id);
+    onSave(
+      {
+        title: trimmed,
+        priority,
+        labels,
+        description: description.trim() || undefined,
+        date: isEdit ? date : undefined,
+      },
+      task?.id
+    );
   };
 
   return (
@@ -213,11 +278,21 @@ export function EditTaskModal({ task, dateKey: _dateKey, onSave, onClose }: Edit
             if (e.key === 'Enter') handleSave();
           }}
         />
-
+        {isEdit && (
+          <Section>
+            <Label htmlFor="task-date">Date</Label>
+            <Input
+              id="task-date"
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+            />
+          </Section>
+        )}
         <Section>
           <Label>Priority</Label>
           <PriorityRow>
-            {PRIORITIES.map(p => (
+            {PRIORITY_VALUES.map(p => (
               <PriorityButton
                 key={p}
                 active={priority === p}
@@ -240,11 +315,27 @@ export function EditTaskModal({ task, dateKey: _dateKey, onSave, onClose }: Edit
                 selected={labels.includes(color)}
                 onClick={() => toggleLabel(color)}
                 aria-label={`Toggle label ${color}`}
-              />
+                aria-pressed={labels.includes(color)}
+              >
+                {labels.includes(color) && (
+                  <CheckBadge>
+                    <CheckIcon size={14} strokeWidth={3} />
+                  </CheckBadge>
+                )}
+              </LabelSwatch>
             ))}
           </LabelsRow>
         </Section>
-
+        <Section>
+          <Label htmlFor="task-description">Description</Label>
+          <Textarea
+            id="task-description"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Add details..."
+            maxLength={1000}
+          />
+        </Section>
         <Footer>
           <CancelButton onClick={onClose}>Cancel</CancelButton>
           <SaveButton onClick={handleSave} disabled={!title.trim()}>

@@ -30,21 +30,26 @@ const Card = styled.div<{ isDragging: boolean }>`
 `;
 
 const TopRow = styled.div`
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 4px;
   min-height: 20px;
 `;
 
 const Labels = styled.div`
+  min-width: 0;
   display: flex;
   gap: 4px;
+  flex: 1;
 `;
 
 const LabelBar = styled.div<{ color: string }>`
   height: 4px;
-  width: 32px;
+  flex: 1 1 0;
+  max-width: 32px;
+  min-width: 6px;
   border-radius: 2px;
   background: ${({ color }) => color};
 `;

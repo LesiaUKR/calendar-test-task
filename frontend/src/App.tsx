@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@emotion/react';
 import styled from '@emotion/styled';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { AppHeader } from './components/AppHeader';
 import { Calendar } from './components/Calendar/Calendar';
@@ -15,10 +15,27 @@ const Container = styled.div`
 `;
 
 export const App = () => {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      return localStorage.getItem('calendar-theme') === 'dark';
+    } catch {
+      return false;
+    }
+  });
+
   const { countries, country, setCountry } = useCountries();
 
   const toggleTheme = useCallback(() => setIsDark(prev => !prev), []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('calendar-theme', isDark ? 'dark' : 'light');
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Theme persistence failed', error);
+      }
+    }
+  }, [isDark]);
 
   return (
     <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
