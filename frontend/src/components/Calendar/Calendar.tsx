@@ -4,6 +4,7 @@ import {
   closestCenter,
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragOverlay,
   DragStartEvent,
 } from '@dnd-kit/core';
@@ -18,7 +19,7 @@ import { useAppDispatch, useAppSelector } from '../../store';
 import {
   createTask,
   deleteTask,
-  fetchTasks,
+  fetchTasksByMonthYear,
   optimisticReorder,
   reorderTasks,
   updateTask,
@@ -31,8 +32,6 @@ import { EditTaskModal } from './EditTaskModal';
 import { TaskCard } from './TaskCard';
 
 interface CalendarProps {
-  isDark: boolean;
-  onToggleTheme: () => void;
   countries: Country[];
   country: string;
   onCountryChange: (code: string) => void;
@@ -41,15 +40,22 @@ interface CalendarProps {
 const Wrapper = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: ${({ theme }) => theme.colors.surface};
 `;
 
-const Grid = styled.div`
+const WeekdaysGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: auto;
-  grid-auto-rows: minmax(120px, 1fr);
+  grid-template-columns: repeat(7, minmax(180px, 1fr));
+  min-width: 1260px;
+`;
+
+const DaysGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, minmax(180px, 1fr));
+  grid-auto-rows: 260px;
+  min-width: 1260px;
 `;
 
 const WeekdayCell = styled.div`
@@ -74,21 +80,17 @@ const WEEKDAYS = Array.from({ length: 7 }, (_, i) => formatter.format(new Date(2
 
 const todayKey = formatDateKey(new Date());
 
-export function Calendar({
-  isDark,
-  onToggleTheme,
-  countries,
-  country,
-  onCountryChange,
-}: CalendarProps) {
-  const { grid, currentMonth, currentYear } = useCalendar();
+export function Calendar({ countries, country, onCountryChange }: CalendarProps) {
+  const { grid, currentMonth, currentYear, setCalendarMonth, setCalendarYear } = useCalendar();
+  const [dropPreview, setDropPreview] = useState<{ dateKey: string; index: number } | null>(null);
   const holidays = useHolidays(currentYear, country);
   const tasks = useAppSelector(state => state.tasks.tasks);
+
   const dispatch = useAppDispatch();
 
   useEffect(() => {
     const month = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-    dispatch(fetchTasks(month));
+    dispatch(fetchTasksByMonthYear(month));
   }, [dispatch, currentYear, currentMonth]);
 
   const tasksByDate = useMemo(() => {
@@ -156,6 +158,7 @@ export function Calendar({
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      setDropPreview(null);
       setActiveTask(null);
       const { active, over } = event;
       if (!over || active.id === over.id) return;
@@ -223,25 +226,78 @@ export function Calendar({
     [tasks, dispatch]
   );
 
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { active, over } = event;
+      if (!over) {
+        setDropPreview(null);
+        return;
+      }
+
+      const activeId = String(active.id);
+      const overId = String(over.id);
+
+      const draggedTask = tasks.find(t => t.id === activeId);
+      if (!draggedTask) {
+        setDropPreview(null);
+        return;
+      }
+
+      const overTask = tasks.find(t => t.id === overId);
+      const targetDate = overTask
+        ? overTask.date
+        : overId.startsWith('droppable-')
+          ? overId.replace('droppable-', '')
+          : overId;
+
+      const targetTasks = tasks
+        .filter(t => t.date === targetDate)
+        .sort((a, b) => a.order - b.order);
+
+      const index = overTask ? targetTasks.findIndex(t => t.id === overId) : targetTasks.length;
+
+      setDropPreview({ dateKey: targetDate, index: Math.max(0, index) });
+    },
+    [tasks]
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setDropPreview(null);
+    setActiveTask(null);
+  }, []);
+
+  const handleSelectSearchResult = useCallback(
+    (task: Task) => {
+      const year = parseInt(task.date.slice(0, 4));
+      const month = parseInt(task.date.slice(5, 7)) - 1;
+      setCalendarMonth(month);
+      setCalendarYear(year);
+    },
+    [setCalendarMonth, setCalendarYear]
+  );
+
   return (
     <>
       <CalendarHeader
-        isDark={isDark}
-        onToggleTheme={onToggleTheme}
         countries={countries}
         country={country}
         onCountryChange={onCountryChange}
+        onSelectSearchResult={handleSelectSearchResult}
       />
       <DndContext
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <Wrapper>
-          <Grid>
+          <WeekdaysGrid>
             {WEEKDAYS.map(day => (
               <WeekdayCell key={day}>{day}</WeekdayCell>
             ))}
+          </WeekdaysGrid>
+          <DaysGrid>
             {grid.map(week =>
               week.map(date => {
                 const key = formatDateKey(date);
@@ -259,14 +315,17 @@ export function Calendar({
                     onAddTask={handleAddTask}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    dropPreviewIndex={dropPreview?.dateKey === key ? dropPreview.index : null}
                   />
                 );
               })
             )}
-          </Grid>
+          </DaysGrid>
         </Wrapper>
         <DragOverlay>
-          {activeTask ? <TaskCard task={activeTask} onEdit={() => {}} onDelete={() => {}} /> : null}
+          {activeTask ? (
+            <TaskCard task={activeTask} onEdit={() => {}} onDelete={() => {}} forceDraggingCursor />
+          ) : null}
         </DragOverlay>
       </DndContext>
       {editingState && (

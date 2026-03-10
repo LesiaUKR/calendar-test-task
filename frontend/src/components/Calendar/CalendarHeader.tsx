@@ -1,18 +1,21 @@
+import type { Task } from '@calendar/shared';
 import styled from '@emotion/styled';
-import { ChevronLeft, ChevronRight, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCalendar } from '../../hooks/useCalendar';
 import type { Country } from '../../services/holidayService';
-import { useAppDispatch } from '../../store';
+import { useAppDispatch, useAppSelector } from '../../store';
 import { setQuery } from '../../store/searchSlice';
+import { fetchAllTasks, selectFilteredTasks } from '../../store/tasksSlice';
+import { CustomSelect } from '../ui/CustomSelect';
+import { SearchResults } from './SearchResults';
 
 interface CalendarHeaderProps {
-  isDark: boolean;
-  onToggleTheme: () => void;
   countries: Country[];
   country: string;
   onCountryChange: (code: string) => void;
+  onSelectSearchResult: (task: Task) => void;
 }
 
 const Header = styled.header`
@@ -48,7 +51,11 @@ const NavButton = styled.button`
   color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
   font-size: 18px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 
   &:hover {
     background: ${({ theme }) => theme.colors.surfaceHover};
@@ -61,79 +68,8 @@ const NavButton = styled.button`
   }
 `;
 
-const MonthSelect = styled.select`
-  font-size: 22px;
-  font-weight: 600;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid transparent;
-  border-radius: 10px;
-  color: ${({ theme }) => theme.colors.text};
-  cursor: pointer;
-  outline: none;
-  padding: 6px 12px;
-  letter-spacing: -0.02em;
-  transition: all 0.15s ease;
-
-  &:focus-visible {
-    border-color: ${({ theme }) => theme.colors.accent};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent}33;
-    outline: none;
-  }
-
-  option {
-    background: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.text};
-    font-size: 14px;
-    font-weight: 400;
-  }
-`;
-
-const YearSelect = styled.select`
-  font-size: 22px;
-  font-weight: 600;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid transparent;
-  border-radius: 10px;
-  color: ${({ theme }) => theme.colors.text};
-  cursor: pointer;
-  outline: none;
-  padding: 6px 12px;
-  transition: all 0.15s ease;
-
-  &:focus-visible {
-    border-color: ${({ theme }) => theme.colors.accent};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent}33;
-    outline: none;
-  }
-
-  option {
-    background: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.text};
-    font-size: 14px;
-    font-weight: 400;
-  }
-`;
-
-const CountrySelect = styled.select`
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.colors.borderLight};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: ${({ theme }) => theme.font.size.md};
-  cursor: pointer;
-  outline: none;
-  transition: all 0.15s ease;
-
-  &:focus-visible {
-    border-color: ${({ theme }) => theme.colors.accent};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent}33;
-    outline: none;
-  }
-`;
-
 const SearchInput = styled.input`
-  padding: 10px 14px;
+  padding: 10px 32px 10px 14px;
   border-radius: 10px;
   border: 1px solid ${({ theme }) => theme.colors.borderLight};
   background: ${({ theme }) => theme.colors.background};
@@ -141,7 +77,11 @@ const SearchInput = styled.input`
   font-size: ${({ theme }) => theme.font.size.md};
   width: 220px;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 
   &::placeholder {
     color: ${({ theme }) => theme.colors.textSecondary};
@@ -153,28 +93,37 @@ const SearchInput = styled.input`
   }
 `;
 
-const ThemeButton = styled.button`
-  width: 36px;
-  height: 36px;
+const SearchWrapper = styled.div`
+  position: relative;
+`;
+
+const InputWrapper = styled.div`
+  position: relative;
+`;
+
+const ClearButton = styled.button`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.borderLight};
-  border-radius: 10px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.surfaceHover};
   color: ${({ theme }) => theme.colors.textSecondary};
   cursor: pointer;
-  font-size: 16px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 100ms ease,
+    color 100ms ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surfaceHover};
-  }
-
-  &:focus-visible {
-    border-color: ${({ theme }) => theme.colors.accent};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent}33;
-    outline: none;
+    background: ${({ theme }) => theme.colors.borderLight};
+    color: ${({ theme }) => theme.colors.text};
   }
 `;
 
@@ -182,11 +131,10 @@ const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'long' });
 const MONTHS = Array.from({ length: 12 }, (_, i) => monthFormatter.format(new Date(2024, i)));
 
 export function CalendarHeader({
-  isDark,
-  onToggleTheme,
   countries,
   country,
   onCountryChange,
+  onSelectSearchResult,
 }: CalendarHeaderProps) {
   const dispatch = useAppDispatch();
   const {
@@ -198,15 +146,42 @@ export function CalendarHeader({
     setCalendarYear,
   } = useCalendar();
 
+  const yearRange = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
+
+  const monthOptions = MONTHS.map((label, value) => ({ value, label }));
+  const yearOptions = yearRange.map(y => ({ value: y, label: String(y) }));
+  const countryOptions = countries.map(c => ({ value: c.countryCode, label: c.name }));
+
   const [searchValue, setSearchValue] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const allFetchedRef = useRef(false);
 
-  const yearRange = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
+  const filteredTasks = useAppSelector(state => selectFilteredTasks(state, searchValue));
+
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  // Reset highlighted index when search value changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+    setSelectedTaskId(null);
+  }, [searchValue]);
+
+  const isDropdownOpen = searchValue.trim() !== '';
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setSearchValue(value);
+
+      if (value.trim() && !allFetchedRef.current) {
+        dispatch(fetchAllTasks());
+        allFetchedRef.current = true;
+      }
+
+      if (!value.trim()) {
+        allFetchedRef.current = false;
+      }
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
@@ -216,22 +191,47 @@ export function CalendarHeader({
     [dispatch]
   );
 
+  const handleResultSelect = useCallback(
+    (task: Task) => {
+      setSelectedTaskId(task.id);
+      onSelectSearchResult(task);
+    },
+    [onSelectSearchResult]
+  );
+
+  const handleClear = useCallback(() => {
+    setSearchValue('');
+    dispatch(setQuery(''));
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    allFetchedRef.current = false;
+    setSelectedTaskId(null);
+    setHighlightedIndex(-1);
+  }, [dispatch]);
+
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Escape') {
         setSearchValue('');
         dispatch(setQuery(''));
         if (debounceRef.current) clearTimeout(debounceRef.current);
+        return;
+      }
+
+      if (!isDropdownOpen) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedIndex(prev => Math.min(prev + 1, filteredTasks.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedIndex(prev => Math.max(prev - 1, 0));
+      } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+        e.preventDefault();
+        handleResultSelect(filteredTasks[highlightedIndex]);
       }
     },
-    [dispatch]
+    [dispatch, isDropdownOpen, filteredTasks, highlightedIndex, handleResultSelect]
   );
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   return (
     <Header>
@@ -239,60 +239,69 @@ export function CalendarHeader({
         <NavButton onClick={goToPrevMonth} aria-label="Previous month">
           <ChevronLeft size={18} />
         </NavButton>
-        <MonthSelect
+        <CustomSelect
           value={currentMonth}
-          onChange={e => setCalendarMonth(Number(e.target.value))}
-          aria-label="Select month"
-        >
-          {MONTHS.map((name, i) => (
-            <option key={name} value={i}>
-              {name}
-            </option>
-          ))}
-        </MonthSelect>
-
-        <YearSelect
+          options={monthOptions}
+          onChange={setCalendarMonth}
+          ariaLabel="Select month"
+          size="lg"
+          minWidth="130px"
+          borderMode="transparent"
+        />
+        <CustomSelect
           value={currentYear}
-          onChange={e => setCalendarYear(Number(e.target.value))}
-          aria-label="Select year"
-        >
-          {yearRange.map(y => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </YearSelect>
-
+          options={yearOptions}
+          onChange={setCalendarYear}
+          ariaLabel="Select year"
+          size="lg"
+          minWidth="110px"
+          borderMode="transparent"
+        />
         <NavButton onClick={goToNextMonth} aria-label="Next month">
           <ChevronRight size={18} />
         </NavButton>
       </NavGroup>
 
       <ControlsGroup>
-        <CountrySelect
+        <CustomSelect
           value={country}
-          onChange={e => onCountryChange(e.target.value)}
-          aria-label="Select country"
-        >
-          {countries.map(c => (
-            <option key={c.countryCode} value={c.countryCode}>
-              {c.name}
-            </option>
-          ))}
-        </CountrySelect>
-
-        <SearchInput
-          type="text"
-          placeholder="Search tasks..."
-          value={searchValue}
-          onChange={handleSearchChange}
-          onKeyDown={handleSearchKeyDown}
-          aria-label="Search tasks"
+          options={countryOptions}
+          onChange={onCountryChange}
+          ariaLabel="Select country"
+          size="md"
+          minWidth="220px"
+          borderMode="light"
         />
-
-        <ThemeButton onClick={onToggleTheme} aria-label="Toggle theme">
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
-        </ThemeButton>
+        <SearchWrapper>
+          <InputWrapper>
+            <SearchInput
+              type="text"
+              placeholder="Search tasks..."
+              value={searchValue}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              aria-label="Search tasks"
+              aria-expanded={isDropdownOpen}
+              aria-controls="search-results-listbox"
+              aria-activedescendant={
+                highlightedIndex >= 0 ? `search-result-${highlightedIndex}` : undefined
+              }
+            />
+            {isDropdownOpen && (
+              <ClearButton onClick={handleClear} aria-label="Clear search">
+                <X size={14} />
+              </ClearButton>
+            )}
+          </InputWrapper>
+          {isDropdownOpen && (
+            <SearchResults
+              tasks={filteredTasks}
+              selectedTaskId={selectedTaskId}
+              highlightedIndex={highlightedIndex}
+              onSelect={handleResultSelect}
+            />
+          )}
+        </SearchWrapper>
       </ControlsGroup>
     </Header>
   );

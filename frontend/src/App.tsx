@@ -2,6 +2,7 @@ import { ThemeProvider } from '@emotion/react';
 import styled from '@emotion/styled';
 import { useCallback, useState } from 'react';
 
+import { AppHeader } from './components/AppHeader';
 import { Calendar } from './components/Calendar/Calendar';
 import { useCountries } from './hooks/useCountries';
 import { GlobalStyles } from './styles/GlobalStyles';
@@ -22,14 +23,9 @@ export const App = () => {
   return (
     <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
       <GlobalStyles />
+      <AppHeader isDark={isDark} onToggleTheme={toggleTheme} />
       <Container>
-        <Calendar
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
-          countries={countries}
-          country={country}
-          onCountryChange={setCountry}
-        />
+        <Calendar countries={countries} country={country} onCountryChange={setCountry} />
       </Container>
     </ThemeProvider>
   );

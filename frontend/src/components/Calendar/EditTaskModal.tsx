@@ -85,7 +85,11 @@ const PriorityButton = styled.button<{ active: boolean; priorityColor: string }>
   font-size: ${({ theme }) => theme.font.size.sm};
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 
   &:hover {
     border-color: ${({ priorityColor }) => priorityColor};
@@ -106,7 +110,10 @@ const LabelSwatch = styled.button<{ swatchColor: string; selected: boolean }>`
   cursor: pointer;
   outline-offset: 2px;
   opacity: ${({ selected }) => (selected ? 1 : 0.5)};
-  transition: all 0.15s ease;
+  transition:
+    opacity 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 
   &:hover {
     opacity: 1;
@@ -126,7 +133,11 @@ const Button = styled.button`
   font-size: ${({ theme }) => theme.font.size.md};
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 `;
 
 const CancelButton = styled(Button)`

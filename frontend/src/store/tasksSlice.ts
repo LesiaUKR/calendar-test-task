@@ -4,19 +4,26 @@ import { createAsyncThunk, createSelector, createSlice, PayloadAction } from '@r
 import api from '../services/taskService';
 
 export interface TasksState {
-  tasks: Task[];
+  tasks: Task[]; // month-scoped, used by calendar grid
+  allTasks: Task[]; // all tasks, used by search dropdown
   loading: boolean;
   error: string | null;
 }
 
 const initialState: TasksState = {
   tasks: [],
+  allTasks: [],
   loading: false,
   error: null,
 };
 
-export const fetchTasks = createAsyncThunk('tasks/fetchTasks', async (month: string) => {
+export const fetchTasksByMonthYear = createAsyncThunk('tasks/fetchTasks', async (month: string) => {
   const { data } = await api.get<Task[]>('/tasks', { params: { month } });
+  return data;
+});
+
+export const fetchAllTasks = createAsyncThunk('tasks/fetchAllTasks', async () => {
+  const { data } = await api.get<Task[]>('/tasks');
   return data;
 });
 
@@ -59,15 +66,15 @@ const tasksSlice = createSlice({
   },
   extraReducers: builder => {
     builder
-      .addCase(fetchTasks.pending, state => {
+      .addCase(fetchTasksByMonthYear.pending, state => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchTasks.fulfilled, (state, action) => {
+      .addCase(fetchTasksByMonthYear.fulfilled, (state, action) => {
         state.loading = false;
         state.tasks = action.payload;
       })
-      .addCase(fetchTasks.rejected, (state, action) => {
+      .addCase(fetchTasksByMonthYear.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message ?? 'Failed to fetch tasks';
       })
@@ -86,6 +93,18 @@ const tasksSlice = createSlice({
       })
       .addCase(reorderTasks.rejected, (state, action) => {
         state.error = action.error.message ?? 'Failed to reorder tasks';
+      })
+      .addCase(fetchAllTasks.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllTasks.fulfilled, (state, action) => {
+        state.loading = false;
+        state.allTasks = action.payload;
+      })
+      .addCase(fetchAllTasks.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message ?? 'Failed to fetch tasks';
       });
   },
 });
@@ -95,7 +114,7 @@ export const { optimisticReorder } = tasksSlice.actions;
 
 export const selectFilteredTasks = createSelector(
   [
-    (state: { tasks: TasksState }) => state.tasks.tasks,
+    (state: { tasks: TasksState }) => state.tasks.allTasks,
     (_state: { tasks: TasksState }, query: string) => query,
   ],
   (tasks, query) =>

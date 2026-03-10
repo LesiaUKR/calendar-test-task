@@ -8,18 +8,20 @@ const GUEST_USER_ID = 'guest-user-id';
 
 export const getTasks = async (req: Request, res: Response) => {
   const month = req.query.month as string | undefined;
-  if (!month) throw new HttpError(400, 'month query parameter is required');
+  const where: { userId: string; date?: { startsWith: string } } = {
+    userId: GUEST_USER_ID,
+  };
 
-  const result = monthQuerySchema.safeParse(month);
-  if (!result.success) {
-    throw new HttpError(400, 'month must be in YYYY-MM format');
+  if (month) {
+    const result = monthQuerySchema.safeParse(month);
+    if (!result.success) {
+      throw new HttpError(400, 'month must be in YYYY-MM format');
+    }
+    where.date = { startsWith: `${month}-` };
   }
 
   const tasks = await prisma.task.findMany({
-    where: {
-      userId: GUEST_USER_ID,
-      date: { startsWith: `${month}-` },
-    },
+    where,
     orderBy: [{ date: 'asc' }, { order: 'asc' }],
   });
 

@@ -2,6 +2,7 @@ import type { Task } from '@calendar/shared';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import styled from '@emotion/styled';
+import { useState } from 'react';
 
 import type { PublicHoliday } from '../../services/holidayService';
 import { formatDateKey } from '../../utils/calendar';
@@ -17,6 +18,7 @@ interface DayCellProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onAddTask: (dateKey: string) => void;
+  dropPreviewIndex?: number | null;
 }
 
 const Cell = styled.div<{ isBoundary: boolean; isToday: boolean }>`
@@ -74,13 +76,14 @@ const TaskCount = styled.span`
 
 const TasksContainer = styled.div`
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.xs};
   overflow: hidden;
 `;
 
-const AddButton = styled.button`
+const AddButton = styled.button<{ visible: boolean }>`
   margin-top: ${({ theme }) => theme.spacing.xs};
   padding: ${({ theme }) => theme.spacing.xs};
   border: 1px dashed ${({ theme }) => theme.colors.addButtonBorder};
@@ -93,11 +96,8 @@ const AddButton = styled.button`
   color: ${({ theme }) => theme.colors.addButtonText};
   font-size: ${({ theme }) => theme.font.size.md};
   transition: opacity 0.15s ease;
-  opacity: 0;
-
-  ${Cell}:hover & {
-    opacity: 1;
-  }
+  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  pointer-events: ${({ visible }) => (visible ? 'auto' : 'none')};
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.accent};
@@ -112,6 +112,13 @@ const MoreLink = styled.span`
   cursor: default;
 `;
 
+const DropIndicator = styled.div`
+  height: 1px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.accent};
+  margin: 2px 0;
+`;
+
 export function DayCell({
   date,
   isBoundary,
@@ -121,7 +128,11 @@ export function DayCell({
   onAddTask,
   onEdit,
   onDelete,
+  dropPreviewIndex,
 }: DayCellProps) {
+  const [isCellHovered, setIsCellHovered] = useState(false);
+  const [isTaskCardHovered, setIsTaskCardHovered] = useState(false);
+
   const MAX_VISIBLE = 2;
   const dateKey = formatDateKey(date);
   const dayNumber = date.getDate();
@@ -129,12 +140,23 @@ export function DayCell({
   const hiddenCount = tasks.length - visibleTasks.length;
   const taskIds = visibleTasks.map(t => t.id);
 
+  const showAddButton = isCellHovered && !isTaskCardHovered;
+
   const { setNodeRef: setDroppableRef } = useDroppable({
     id: `droppable-${dateKey}`,
   });
 
   return (
-    <Cell ref={setDroppableRef} isBoundary={isBoundary} isToday={isToday}>
+    <Cell
+      ref={setDroppableRef}
+      isBoundary={isBoundary}
+      isToday={isToday}
+      onMouseEnter={() => setIsCellHovered(true)}
+      onMouseLeave={() => {
+        setIsCellHovered(false);
+        setIsTaskCardHovered(false);
+      }}
+    >
       <Header>
         {isToday && !isBoundary ? (
           <TodayBadge>{dayNumber}</TodayBadge>
@@ -154,16 +176,28 @@ export function DayCell({
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <TasksContainer>
-          {visibleTasks.map(task => (
-            <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
+          {visibleTasks.map((task, i) => (
+            <div
+              key={task.id}
+              onMouseEnter={() => setIsTaskCardHovered(true)}
+              onMouseLeave={() => setIsTaskCardHovered(false)}
+            >
+              {dropPreviewIndex === i && <DropIndicator />}
+              <TaskCard task={task} onEdit={onEdit} onDelete={onDelete} />
+            </div>
           ))}
+          {dropPreviewIndex === visibleTasks.length && <DropIndicator />}
         </TasksContainer>
       </SortableContext>
 
       {hiddenCount > 0 && <MoreLink>+{hiddenCount} more</MoreLink>}
 
       {!isBoundary && (
-        <AddButton onClick={() => onAddTask(dateKey)} aria-label={`Add task for ${dateKey}`}>
+        <AddButton
+          visible={showAddButton}
+          onClick={() => onAddTask(dateKey)}
+          aria-label={`Add task for ${dateKey}`}
+        >
           +
         </AddButton>
       )}
