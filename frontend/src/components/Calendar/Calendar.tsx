@@ -19,7 +19,7 @@ import { useAppDispatch, useAppSelector } from '../../store';
 import {
   createTask,
   deleteTask,
-  fetchTasksByMonthYear,
+  fetchTasksByMonths,
   optimisticReorder,
   reorderTasks,
   updateTask,
@@ -27,6 +27,7 @@ import {
 import { formatDateKey } from '../../utils/calendar';
 import { CalendarHeader } from './CalendarHeader';
 import { DayCell } from './DayCell';
+import { DayTasksModal } from './DayTasksModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { EditTaskModal } from './EditTaskModal';
 import { TaskCard } from './TaskCard';
@@ -83,15 +84,53 @@ const todayKey = formatDateKey(new Date());
 export function Calendar({ countries, country, onCountryChange }: CalendarProps) {
   const { grid, currentMonth, currentYear, setCalendarMonth, setCalendarYear } = useCalendar();
   const [dropPreview, setDropPreview] = useState<{ dateKey: string; index: number } | null>(null);
+  const [highlightedDateKey, setHighlightedDateKey] = useState<string | null>(null);
+  const [editingState, setEditingState] = useState<{ task: Task | null; dateKey: string } | null>(
+    null
+  );
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+  const [expandedDayKey, setExpandedDayKey] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
   const holidays = useHolidays(currentYear, country);
   const tasks = useAppSelector(state => state.tasks.tasks);
 
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const month = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-    dispatch(fetchTasksByMonthYear(month));
+    const formatMonth = (date: Date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+    const current = new Date(currentYear, currentMonth, 1);
+    const prev = new Date(currentYear, currentMonth - 1, 1);
+    const next = new Date(currentYear, currentMonth + 1, 1);
+
+    dispatch(fetchTasksByMonths([formatMonth(prev), formatMonth(current), formatMonth(next)]));
   }, [dispatch, currentYear, currentMonth]);
+
+  useEffect(() => {
+    if (!highlightedDateKey) return;
+
+    const timer = window.setTimeout(() => {
+      setHighlightedDateKey(null);
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [highlightedDateKey]);
+
+  useEffect(() => {
+    if (!highlightedDateKey) return;
+
+    const cell = document.querySelector(
+      `[data-date-key="${highlightedDateKey}"]`
+    ) as HTMLElement | null;
+    if (!cell) return;
+
+    cell.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [highlightedDateKey]);
 
   const tasksByDate = useMemo(() => {
     const map = new Map<string, typeof tasks>();
@@ -109,12 +148,6 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
     return map;
   }, [tasks]);
 
-  const [editingState, setEditingState] = useState<{ task: Task | null; dateKey: string } | null>(
-    null
-  );
-  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
-
   const handleAddTask = useCallback((dateKey: string) => {
     setEditingState({ task: null, dateKey });
   }, []);
@@ -128,7 +161,16 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
   }, []);
 
   const handleSave = useCallback(
-    (data: { title: string; priority?: Priority; labels: string[] }, taskId?: string) => {
+    (
+      data: {
+        title: string;
+        priority?: Priority;
+        labels: string[];
+        description?: string;
+        date?: string;
+      },
+      taskId?: string
+    ) => {
       if (taskId) {
         dispatch(updateTask({ id: taskId, ...data }));
       } else if (editingState?.dateKey) {
@@ -147,6 +189,12 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
     },
     [dispatch]
   );
+
+  const handleOpenDayTasks = useCallback((dateKey: string) => {
+    setExpandedDayKey(dateKey);
+  }, []);
+
+  const expandedDayTasks = expandedDayKey ? (tasksByDate.get(expandedDayKey) ?? []) : [];
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -267,11 +315,12 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
   }, []);
 
   const handleSelectSearchResult = useCallback(
-    (task: Task) => {
+    (task: Task, dateKey: string) => {
       const year = parseInt(task.date.slice(0, 4));
       const month = parseInt(task.date.slice(5, 7)) - 1;
       setCalendarMonth(month);
       setCalendarYear(year);
+      setHighlightedDateKey(dateKey);
     },
     [setCalendarMonth, setCalendarYear]
   );
@@ -315,6 +364,8 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
                     onAddTask={handleAddTask}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    onOpenDayTasks={handleOpenDayTasks}
+                    isSearchHighlighted={highlightedDateKey === key}
                     dropPreviewIndex={dropPreview?.dateKey === key ? dropPreview.index : null}
                   />
                 );
@@ -328,6 +379,25 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
           ) : null}
         </DragOverlay>
       </DndContext>
+      {expandedDayKey && (
+        <DayTasksModal
+          dateKey={expandedDayKey}
+          tasks={expandedDayTasks}
+          onClose={() => setExpandedDayKey(null)}
+          onAddTask={dateKey => {
+            setExpandedDayKey(null);
+            handleAddTask(dateKey);
+          }}
+          onEditTask={task => {
+            setExpandedDayKey(null);
+            handleEdit(task);
+          }}
+          onDeleteTask={task => {
+            setExpandedDayKey(null);
+            handleDelete(task);
+          }}
+        />
+      )}
       {editingState && (
         <EditTaskModal
           task={editingState.task}

@@ -15,7 +15,7 @@ interface CalendarHeaderProps {
   countries: Country[];
   country: string;
   onCountryChange: (code: string) => void;
-  onSelectSearchResult: (task: Task) => void;
+  onSelectSearchResult: (task: Task, dateKey: string) => void;
 }
 
 const Header = styled.header`
@@ -25,18 +25,21 @@ const Header = styled.header`
   padding: 20px 28px;
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.spacing.md};
+  row-gap: ${({ theme }) => theme.spacing.sm};
 `;
 
 const NavGroup = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.spacing.sm};
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 `;
 
 const ControlsGroup = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.spacing.sm};
 `;
 
 const NavButton = styled.button`
@@ -68,14 +71,47 @@ const NavButton = styled.button`
   }
 `;
 
+const TodayButton = styled.button<{ isActive: boolean }>`
+  height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ theme, isActive }) =>
+    isActive ? `${theme.colors.accent}14` : theme.colors.background};
+  border: 1px solid
+    ${({ theme, isActive }) => (isActive ? `${theme.colors.accent}55` : theme.colors.borderLight)};
+  border-radius: 10px;
+  color: ${({ theme, isActive }) => (isActive ? theme.colors.accent : theme.colors.textSecondary)};
+  cursor: pointer;
+  font-size: ${({ theme }) => theme.font.size.sm};
+  font-weight: ${({ isActive }) => (isActive ? 700 : 600)};
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+
+  &:hover {
+    background: ${({ theme, isActive }) =>
+      isActive ? `${theme.colors.accent}24` : theme.colors.surfaceHover};
+  }
+
+  &:focus-visible {
+    border-color: ${({ theme }) => theme.colors.accent};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent}33;
+    outline: none;
+  }
+`;
+
 const SearchInput = styled.input`
-  padding: 10px 32px 10px 14px;
+  padding: 10px 14px 10px 14px;
   border-radius: 10px;
   border: 1px solid ${({ theme }) => theme.colors.borderLight};
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: ${({ theme }) => theme.font.size.md};
-  width: 220px;
+  width: 100%;
   outline: none;
   transition:
     background-color 150ms ease,
@@ -87,6 +123,11 @@ const SearchInput = styled.input`
     color: ${({ theme }) => theme.colors.textSecondary};
   }
 
+  &:hover {
+    background: ${({ theme }) => theme.colors.surfaceHover};
+    border-color: ${({ theme }) => theme.colors.borderLight};
+  }
+
   &:focus {
     border-color: ${({ theme }) => theme.colors.accent};
     box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accent}33;
@@ -95,6 +136,9 @@ const SearchInput = styled.input`
 
 const SearchWrapper = styled.div`
   position: relative;
+  width: 180px;
+  min-width: 100px;
+  flex-shrink: 1;
 `;
 
 const InputWrapper = styled.div`
@@ -146,7 +190,16 @@ export function CalendarHeader({
     setCalendarYear,
   } = useCalendar();
 
-  const yearRange = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
+  const [yearBounds, setYearBounds] = useState(() => ({
+    start: currentYear - 10,
+    end: currentYear + 10,
+  }));
+  const isAdjustingYearsRef = useRef(false);
+
+  const yearRange = Array.from(
+    { length: yearBounds.end - yearBounds.start + 1 },
+    (_, i) => yearBounds.start + i
+  );
 
   const monthOptions = MONTHS.map((label, value) => ({ value, label }));
   const yearOptions = yearRange.map(y => ({ value: y, label: String(y) }));
@@ -155,19 +208,68 @@ export function CalendarHeader({
   const [searchValue, setSearchValue] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const allFetchedRef = useRef(false);
+  const searchAreaRef = useRef<HTMLDivElement>(null);
 
   const filteredTasks = useAppSelector(state => selectFilteredTasks(state, searchValue));
 
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-
-  // Reset highlighted index when search value changes
-  useEffect(() => {
-    setHighlightedIndex(-1);
-    setSelectedTaskId(null);
-  }, [searchValue]);
-
   const isDropdownOpen = searchValue.trim() !== '';
+
+  const now = new Date();
+  const isTodayMonth = currentYear === now.getFullYear() && currentMonth === now.getMonth();
+
+  const handleYearMenuScroll = useCallback((event: React.UIEvent<HTMLUListElement>) => {
+    if (isAdjustingYearsRef.current) return;
+
+    const menu = event.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = menu;
+    const threshold = 24;
+
+    const nearBottom = scrollHeight - (scrollTop + clientHeight) <= threshold;
+    const nearTop = scrollTop <= threshold;
+
+    if (nearBottom) {
+      isAdjustingYearsRef.current = true;
+      setYearBounds(prev => ({ ...prev, end: prev.end + 10 }));
+      requestAnimationFrame(() => {
+        isAdjustingYearsRef.current = false;
+      });
+      return;
+    }
+
+    if (nearTop) {
+      isAdjustingYearsRef.current = true;
+      const prevHeight = scrollHeight;
+      setYearBounds(prev => ({ start: prev.start - 10, end: prev.end }));
+      requestAnimationFrame(() => {
+        const nextHeight = menu.scrollHeight;
+        menu.scrollTop += nextHeight - prevHeight;
+        isAdjustingYearsRef.current = false;
+      });
+    }
+  }, []);
+
+  const handleYearMenuWheel = useCallback((event: React.WheelEvent<HTMLUListElement>) => {
+    if (isAdjustingYearsRef.current) return;
+
+    const menu = event.currentTarget;
+    const isScrollingUp = event.deltaY < 0;
+    const threshold = 2;
+
+    if (isScrollingUp && menu.scrollTop <= threshold) {
+      isAdjustingYearsRef.current = true;
+      const prevHeight = menu.scrollHeight;
+
+      setYearBounds(prev => ({ start: prev.start - 10, end: prev.end }));
+
+      requestAnimationFrame(() => {
+        const nextHeight = menu.scrollHeight;
+        menu.scrollTop += nextHeight - prevHeight;
+        isAdjustingYearsRef.current = false;
+      });
+    }
+  }, []);
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,7 +296,7 @@ export function CalendarHeader({
   const handleResultSelect = useCallback(
     (task: Task) => {
       setSelectedTaskId(task.id);
-      onSelectSearchResult(task);
+      onSelectSearchResult(task, task.date);
     },
     [onSelectSearchResult]
   );
@@ -207,6 +309,40 @@ export function CalendarHeader({
     setSelectedTaskId(null);
     setHighlightedIndex(-1);
   }, [dispatch]);
+
+  // Reset highlighted index when search value changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+    setSelectedTaskId(null);
+  }, [searchValue]);
+
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleDocumentPointerDown = (event: MouseEvent) => {
+      if (!searchAreaRef.current?.contains(event.target as Node)) {
+        handleClear();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      handleClear();
+    };
+
+    document.addEventListener('mousedown', handleDocumentPointerDown);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentPointerDown);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [isDropdownOpen, handleClear]);
+
+  const goToToday = useCallback(() => {
+    const now = new Date();
+    setCalendarYear(now.getFullYear());
+    setCalendarMonth(now.getMonth());
+  }, [setCalendarMonth, setCalendarYear]);
 
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -239,6 +375,9 @@ export function CalendarHeader({
         <NavButton onClick={goToPrevMonth} aria-label="Previous month">
           <ChevronLeft size={18} />
         </NavButton>
+        <TodayButton isActive={!isTodayMonth} onClick={goToToday} aria-label="Go to current month">
+          Today
+        </TodayButton>
         <CustomSelect
           value={currentMonth}
           options={monthOptions}
@@ -246,15 +385,19 @@ export function CalendarHeader({
           ariaLabel="Select month"
           size="lg"
           minWidth="130px"
+          width="170px"
           borderMode="transparent"
         />
         <CustomSelect
           value={currentYear}
           options={yearOptions}
           onChange={setCalendarYear}
+          onMenuScroll={handleYearMenuScroll}
+          onMenuWheel={handleYearMenuWheel}
           ariaLabel="Select year"
           size="lg"
           minWidth="110px"
+          width="110px"
           borderMode="transparent"
         />
         <NavButton onClick={goToNextMonth} aria-label="Next month">
@@ -270,9 +413,10 @@ export function CalendarHeader({
           ariaLabel="Select country"
           size="md"
           minWidth="220px"
+          width="220px"
           borderMode="light"
         />
-        <SearchWrapper>
+        <SearchWrapper ref={searchAreaRef}>
           <InputWrapper>
             <SearchInput
               type="text"

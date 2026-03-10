@@ -13,15 +13,17 @@ interface DayCellProps {
   date: Date;
   isBoundary: boolean;
   isToday: boolean;
+  isSearchHighlighted?: boolean;
   tasks: Task[];
   holidays: PublicHoliday[];
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onAddTask: (dateKey: string) => void;
+  onOpenDayTasks: (dateKey: string) => void;
   dropPreviewIndex?: number | null;
 }
 
-const Cell = styled.div<{ isBoundary: boolean; isToday: boolean }>`
+const Cell = styled.div<{ isBoundary: boolean; isToday: boolean; isSearchHighlighted: boolean }>`
   padding: ${({ theme }) => theme.spacing.sm};
   overflow: hidden;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
@@ -29,7 +31,6 @@ const Cell = styled.div<{ isBoundary: boolean; isToday: boolean }>`
   background: ${({ theme, isToday, isBoundary }) =>
     isToday ? theme.colors.today : isBoundary ? theme.colors.surface : theme.colors.background};
   opacity: ${({ isBoundary }) => (isBoundary ? 0.5 : 1)};
-  pointer-events: ${({ isBoundary }) => (isBoundary ? 'none' : 'auto')};
   touch-action: manipulation;
   display: flex;
   flex-direction: column;
@@ -38,6 +39,12 @@ const Cell = styled.div<{ isBoundary: boolean; isToday: boolean }>`
   &:nth-of-type(7n + 7) {
     border-right: none;
   }
+
+  box-shadow: ${({ isSearchHighlighted, theme }) =>
+    isSearchHighlighted ? `inset 0 0 0 2px ${theme.colors.accent}` : 'none'};
+  transition:
+    box-shadow 220ms ease,
+    background-color 220ms ease;
 `;
 
 const Header = styled.div`
@@ -105,11 +112,19 @@ const AddButton = styled.button<{ visible: boolean }>`
   }
 `;
 
-const MoreLink = styled.span`
+const MoreLink = styled.button`
   font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: ${({ theme }) => theme.colors.accent};
   margin-top: ${({ theme }) => theme.spacing.xs};
-  cursor: default;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const DropIndicator = styled.div`
@@ -123,11 +138,13 @@ export function DayCell({
   date,
   isBoundary,
   isToday,
+  isSearchHighlighted = false,
   tasks,
   holidays,
   onAddTask,
   onEdit,
   onDelete,
+  onOpenDayTasks,
   dropPreviewIndex,
 }: DayCellProps) {
   const [isCellHovered, setIsCellHovered] = useState(false);
@@ -149,8 +166,10 @@ export function DayCell({
   return (
     <Cell
       ref={setDroppableRef}
+      data-date-key={dateKey}
       isBoundary={isBoundary}
       isToday={isToday}
+      isSearchHighlighted={isSearchHighlighted}
       onMouseEnter={() => setIsCellHovered(true)}
       onMouseLeave={() => {
         setIsCellHovered(false);
@@ -190,17 +209,21 @@ export function DayCell({
         </TasksContainer>
       </SortableContext>
 
-      {hiddenCount > 0 && <MoreLink>+{hiddenCount} more</MoreLink>}
-
-      {!isBoundary && (
-        <AddButton
-          visible={showAddButton}
-          onClick={() => onAddTask(dateKey)}
-          aria-label={`Add task for ${dateKey}`}
+      {hiddenCount > 0 && (
+        <MoreLink
+          onClick={() => onOpenDayTasks(dateKey)}
+          aria-label={`Show ${hiddenCount} more tasks`}
         >
-          +
-        </AddButton>
+          +{hiddenCount} more
+        </MoreLink>
       )}
+      <AddButton
+        visible={showAddButton}
+        onClick={() => onAddTask(dateKey)}
+        aria-label={`Add task for ${dateKey}`}
+      >
+        +
+      </AddButton>
     </Cell>
   );
 }

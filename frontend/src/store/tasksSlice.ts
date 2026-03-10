@@ -17,10 +17,28 @@ const initialState: TasksState = {
   error: null,
 };
 
-export const fetchTasksByMonthYear = createAsyncThunk('tasks/fetchTasks', async (month: string) => {
-  const { data } = await api.get<Task[]>('/tasks', { params: { month } });
-  return data;
-});
+export const fetchTasksByMonths = createAsyncThunk(
+  'tasks/fetchTasksByMonths',
+  async (months: string[]) => {
+    const uniqueMonths = Array.from(new Set(months));
+
+    const responses = await Promise.all(
+      uniqueMonths.map(month => api.get<Task[]>('/tasks', { params: { month } }))
+    );
+
+    const merged = new Map<string, Task>();
+    for (const response of responses) {
+      for (const task of response.data) {
+        merged.set(task.id, task);
+      }
+    }
+
+    return Array.from(merged.values()).sort((a, b) => {
+      if (a.date === b.date) return a.order - b.order;
+      return a.date.localeCompare(b.date);
+    });
+  }
+);
 
 export const fetchAllTasks = createAsyncThunk('tasks/fetchAllTasks', async () => {
   const { data } = await api.get<Task[]>('/tasks');
@@ -66,18 +84,6 @@ const tasksSlice = createSlice({
   },
   extraReducers: builder => {
     builder
-      .addCase(fetchTasksByMonthYear.pending, state => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchTasksByMonthYear.fulfilled, (state, action) => {
-        state.loading = false;
-        state.tasks = action.payload;
-      })
-      .addCase(fetchTasksByMonthYear.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message ?? 'Failed to fetch tasks';
-      })
       .addCase(createTask.fulfilled, (state, action) => {
         state.tasks.push(action.payload);
       })
@@ -103,6 +109,18 @@ const tasksSlice = createSlice({
         state.allTasks = action.payload;
       })
       .addCase(fetchAllTasks.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message ?? 'Failed to fetch tasks';
+      })
+      .addCase(fetchTasksByMonths.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchTasksByMonths.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tasks = action.payload;
+      })
+      .addCase(fetchTasksByMonths.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message ?? 'Failed to fetch tasks';
       });

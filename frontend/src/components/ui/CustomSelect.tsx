@@ -17,11 +17,15 @@ interface CustomSelectProps<T extends SelectValue> {
   size?: 'md' | 'lg';
   minWidth?: string;
   borderMode?: 'transparent' | 'light';
+  width?: string;
+  onMenuScroll?: (event: React.UIEvent<HTMLUListElement>) => void;
+  onMenuWheel?: (event: React.WheelEvent<HTMLUListElement>) => void;
 }
 
-const Wrap = styled.div<{ minWidth?: string }>`
+const Wrap = styled.div<{ minWidth?: string; width?: string }>`
   position: relative;
   min-width: ${({ minWidth }) => minWidth ?? '180px'};
+  width: ${({ width }) => width ?? 'auto'};
 `;
 
 const Trigger = styled.button<{
@@ -67,6 +71,7 @@ const Trigger = styled.button<{
 `;
 
 const Label = styled.span`
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -117,7 +122,10 @@ export function CustomSelect<T extends SelectValue>({
   ariaLabel,
   size = 'md',
   minWidth,
+  width,
   borderMode = 'light',
+  onMenuScroll,
+  onMenuWheel,
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -142,7 +150,7 @@ export function CustomSelect<T extends SelectValue>({
   }, [isOpen]);
 
   return (
-    <Wrap ref={rootRef} minWidth={minWidth}>
+    <Wrap ref={rootRef} minWidth={minWidth} width={width}>
       <Trigger
         type="button"
         size={size}
@@ -158,7 +166,7 @@ export function CustomSelect<T extends SelectValue>({
       </Trigger>
 
       {isOpen && (
-        <Menu role="listbox" aria-label={ariaLabel}>
+        <Menu role="listbox" aria-label={ariaLabel} onScroll={onMenuScroll} onWheel={onMenuWheel}>
           {options.map(option => (
             <li key={String(option.value)}>
               <OptionButton
