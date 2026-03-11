@@ -222,5 +222,5 @@ export function setupSwagger(app: Express) {
     next();
   });
 
-  app.use('/api-docs', swaggerUi.serveFiles(swaggerDocument), swaggerUi.setup(swaggerDocument));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 }
