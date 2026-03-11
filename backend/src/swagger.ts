@@ -195,5 +195,13 @@ const swaggerDocument = {
 };
 
 export function setupSwagger(app: Express) {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  const options = {
+    customCssUrl: 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css',
+    customJs: [
+      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js',
+      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js',
+    ],
+  };
+
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
 }
