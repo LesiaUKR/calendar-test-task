@@ -104,14 +104,27 @@ const swaggerDocument = {
           },
         },
         responses: {
-          200: { description: 'Reorder successful' },
+          200: {
+            description: 'Reorder successful',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ReorderResponse' },
+              },
+            },
+          },
           400: { description: 'Validation error' },
+          404: { description: 'One or more tasks not found' },
         },
       },
     },
   },
   components: {
     schemas: {
+      LabelColor: {
+        type: 'string',
+        enum: ['#34d399', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'],
+        example: '#34d399',
+      },
       Task: {
         type: 'object',
         properties: {
@@ -121,10 +134,7 @@ const swaggerDocument = {
           order: { type: 'integer', example: 0 },
           labels: {
             type: 'array',
-            items: {
-              type: 'string',
-              enum: ['#34d399', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'],
-            },
+            items: { $ref: '#/components/schemas/LabelColor' },
             example: ['#34d399', '#ef4444'],
           },
           priority: {
@@ -151,10 +161,7 @@ const swaggerDocument = {
           order: { type: 'integer', minimum: 0, example: 0 },
           labels: {
             type: 'array',
-            items: {
-              type: 'string',
-              enum: ['#34d399', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'],
-            },
+            items: { $ref: '#/components/schemas/LabelColor' },
           },
           priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] },
           description: { type: 'string', maxLength: 1000 },
@@ -168,10 +175,7 @@ const swaggerDocument = {
           order: { type: 'integer', minimum: 0 },
           labels: {
             type: 'array',
-            items: {
-              type: 'string',
-              enum: ['#34d399', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'],
-            },
+            items: { $ref: '#/components/schemas/LabelColor' },
           },
           priority: {
             type: 'string',
@@ -188,6 +192,13 @@ const swaggerDocument = {
           id: { type: 'string' },
           date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
           order: { type: 'integer', minimum: 0 },
+        },
+      },
+      ReorderResponse: {
+        type: 'object',
+        required: ['success'],
+        properties: {
+          success: { type: 'boolean', example: true },
         },
       },
     },
