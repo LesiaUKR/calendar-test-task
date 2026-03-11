@@ -24,6 +24,11 @@ function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunct
     return;
   }
 
+  if (err.message === 'Not allowed by CORS') {
+    res.status(403).json({ error: 'CORS policy blocked this origin' });
+    return;
+  }
+
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message });
     return;

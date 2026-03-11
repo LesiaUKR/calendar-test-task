@@ -32,6 +32,14 @@ theme switching.
 - **Country selector** — switch holiday country dynamically
 - **Swagger API docs** — interactive documentation at `/api-docs`
 
+## Security Notes
+
+- `helmet` is enabled for baseline HTTP security headers.
+- `express.json` uses a request size limit (`100kb`).
+- CORS allowlist is configured via `CORS_ORIGIN` (comma-separated origins).
+- Write endpoints are protected with rate limiting.
+- `app.set('trust proxy', 1)` is enabled for correct client IP handling behind Vercel proxy.
+
 ## Project Structure
 
 ```
@@ -73,7 +81,7 @@ npm install
 
 ### Environment Setup
 
-Copy `.env.example` to `.env` in the `backend/` directory:
+Copy root `.env.example` to backend `.env`:
 
 ```bash
 cp backend/.env.example backend/.env
@@ -83,7 +91,7 @@ Set your `DATABASE_URL` in `backend/.env`:
 
 ```env
 DATABASE_URL=postgresql://user:password@host:5432/calendar
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGIN=http://localhost:5173,https://calendar-frontend-umber.vercel.app
 PORT=3001
 ```
 
