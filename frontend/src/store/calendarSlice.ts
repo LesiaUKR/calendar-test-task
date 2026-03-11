@@ -38,8 +38,12 @@ const calendarSlice = createSlice({
     setYear(state, action: PayloadAction<number>) {
       state.currentYear = action.payload;
     },
+    setDate(state, action: PayloadAction<{ year: number; month: number }>) {
+      state.currentYear = action.payload.year;
+      state.currentMonth = action.payload.month;
+    },
   },
 });
 
-export const { prevMonth, nextMonth, setMonth, setYear } = calendarSlice.actions;
+export const { prevMonth, nextMonth, setMonth, setYear, setDate } = calendarSlice.actions;
 export default calendarSlice.reducer;

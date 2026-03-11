@@ -52,18 +52,6 @@ const Right = styled.div`
   gap: 14px;
 `;
 
-const SignInButton = styled.button`
-  border: none;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #fff;
-  background: ${({ theme }) => theme.colors.accent};
-  line-height: 1.2;
-  cursor: default;
-`;
-
 const ThemeButton = styled.button`
   width: 36px;
   height: 36px;
@@ -103,9 +91,6 @@ export function AppHeader({ isDark, onToggleTheme }: AppHeaderProps) {
         </Brand>
 
         <Right>
-          <SignInButton type="button" aria-label="Sign in">
-            Sign In
-          </SignInButton>
           <ThemeButton onClick={onToggleTheme} aria-label="Toggle theme">
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </ThemeButton>

@@ -188,6 +188,7 @@ export function CalendarHeader({
     goToNextMonth,
     setCalendarMonth,
     setCalendarYear,
+    setCalendarDate,
   } = useCalendar();
 
   const [yearBounds, setYearBounds] = useState(() => ({
@@ -214,6 +215,7 @@ export function CalendarHeader({
     () => [...filteredTasks].sort((a, b) => b.date.localeCompare(a.date)),
     [filteredTasks]
   );
+  const tasksLoading = useAppSelector(state => state.tasks.searchLoading);
 
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -336,9 +338,8 @@ export function CalendarHeader({
 
   const goToToday = useCallback(() => {
     const now = new Date();
-    setCalendarYear(now.getFullYear());
-    setCalendarMonth(now.getMonth());
-  }, [setCalendarMonth, setCalendarYear]);
+    setCalendarDate(now.getFullYear(), now.getMonth());
+  }, [setCalendarDate]);
 
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -437,6 +438,7 @@ export function CalendarHeader({
               selectedTaskId={selectedTaskId}
               highlightedIndex={highlightedIndex}
               onSelect={handleResultSelect}
+              isLoading={tasksLoading}
             />
           )}
         </SearchWrapper>
