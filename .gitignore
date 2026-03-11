@@ -80,7 +80,8 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+backend/dist
+frontend/dist
 
 # Gatsby files
 .cache/
@@ -154,7 +155,8 @@ Thumbs.db
 # Prisma generated client
 generated/
 
-# TypeScript build output (composite projects)
-shared/src/*.d.ts
-shared/src/*.js
+# TypeScript build info
 *.tsbuildinfo
+
+# Shared dist — tracked (needed for Vercel deploy)
+!shared/dist/
