@@ -9,7 +9,11 @@ import { setupSwagger } from './swagger';
 const app = express();
 app.set('trust proxy', 1);
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  })
+);
 app.use(corsMiddleware);
 app.use(express.json({ limit: '100kb' }));
 
