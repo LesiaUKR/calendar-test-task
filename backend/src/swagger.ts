@@ -1,4 +1,3 @@
-// backend/src/swagger.ts
 import { Express } from 'express';
 import swaggerUi from 'swagger-ui-express';
 
@@ -13,15 +12,15 @@ const swaggerDocument = {
   paths: {
     '/tasks': {
       get: {
-        summary: 'Get tasks for a month',
+        summary: 'Get tasks (optionally filtered by month)',
         tags: ['Tasks'],
         parameters: [
           {
             in: 'query',
             name: 'month',
-            required: true,
+            required: false,
             schema: { type: 'string', example: '2026-03' },
-            description: 'Month in YYYY-MM format',
+            description: 'Month in YYYY-MM format. If omitted, returns all tasks.',
           },
         ],
         responses: {
@@ -122,8 +121,11 @@ const swaggerDocument = {
           order: { type: 'integer', example: 0 },
           labels: {
             type: 'array',
-            items: { type: 'string' },
-            example: ['work', 'urgent'],
+            items: {
+              type: 'string',
+              enum: ['#34d399', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'],
+            },
+            example: ['#34d399', '#ef4444'],
           },
           priority: {
             type: 'string',
@@ -147,7 +149,13 @@ const swaggerDocument = {
             example: '2026-03-07',
           },
           order: { type: 'integer', minimum: 0, example: 0 },
-          labels: { type: 'array', items: { type: 'string' } },
+          labels: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['#34d399', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'],
+            },
+          },
           priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] },
           description: { type: 'string', maxLength: 1000 },
         },
@@ -158,7 +166,13 @@ const swaggerDocument = {
           title: { type: 'string', minLength: 1, maxLength: 255 },
           date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
           order: { type: 'integer', minimum: 0 },
-          labels: { type: 'array', items: { type: 'string' } },
+          labels: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['#34d399', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444'],
+            },
+          },
           priority: {
             type: 'string',
             enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'],
@@ -181,5 +195,5 @@ const swaggerDocument = {
 };
 
 export function setupSwagger(app: Express) {
-  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 }

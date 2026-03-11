@@ -7,7 +7,7 @@ theme switching.
 
 - **App:** [calendar-frontend-umber.vercel.app](https://calendar-frontend-umber.vercel.app/)
 - **API Docs (Swagger):**
-  [calendar-backend-tau-three.vercel.app/api/docs](https://calendar-backend-tau-three.vercel.app/api/docs)
+  [calendar-backend-tau-three.vercel.app/api-docs](https://calendar-backend-tau-three.vercel.app/api-docs)
 
 ## Tech Stack
 
@@ -142,3 +142,8 @@ npm run dev
 | PATCH  | `/tasks/:id`           | Update a task               |
 | DELETE | `/tasks/:id`           | Delete a task               |
 | PUT    | `/tasks/reorder`       | Reorder tasks (drag & drop) |
+
+## Development Process
+
+Task tracking and progress managed via
+[GitHub Projects board](https://github.com/users/LesiaUKR/projects/1).
