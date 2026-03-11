@@ -6,7 +6,8 @@ import api from '../services/taskService';
 export interface TasksState {
   tasks: Task[]; // month-scoped, used by calendar grid
   allTasks: Task[]; // all tasks, used by search dropdown
-  loading: boolean;
+  calendarLoading: boolean;
+  searchLoading: boolean;
   error: string | null;
   lastReorderRollback: ReorderItem[] | null;
   currentFetchRequestId: string | null;
@@ -15,10 +16,18 @@ export interface TasksState {
 const initialState: TasksState = {
   tasks: [],
   allTasks: [],
-  loading: false,
+  calendarLoading: false,
+  searchLoading: false,
   error: null,
   lastReorderRollback: null,
   currentFetchRequestId: null,
+};
+
+const toUserErrorMessage = (raw: string | undefined, fallback: string) => {
+  if (!raw) return fallback;
+  if (raw.includes('Network Error')) return 'Cannot connect to server. Please try again.';
+  if (raw.includes('Invalid URL')) return 'App configuration error. Please refresh and try again.';
+  return fallback;
 };
 
 export const fetchTasksByMonths = createAsyncThunk(
@@ -100,6 +109,9 @@ const tasksSlice = createSlice({
       }
       state.lastReorderRollback = rollback;
     },
+    clearError(state) {
+      state.error = null;
+    },
   },
   extraReducers: builder => {
     builder
@@ -107,15 +119,33 @@ const tasksSlice = createSlice({
         state.tasks.push(action.payload);
         state.allTasks.push(action.payload);
       })
+      .addCase(createTask.rejected, (state, action) => {
+        state.error = toUserErrorMessage(
+          action.error.message,
+          'Could not create task. Please try again.'
+        );
+      })
       .addCase(updateTask.fulfilled, (state, action) => {
         const index = state.tasks.findIndex(t => t.id === action.payload.id);
         if (index !== -1) state.tasks[index] = action.payload;
         const allIndex = state.allTasks.findIndex(t => t.id === action.payload.id);
         if (allIndex !== -1) state.allTasks[allIndex] = action.payload;
       })
+      .addCase(updateTask.rejected, (state, action) => {
+        state.error = toUserErrorMessage(
+          action.error.message,
+          'Could not update task. Please try again.'
+        );
+      })
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.tasks = state.tasks.filter(t => t.id !== action.payload);
         state.allTasks = state.allTasks.filter(t => t.id !== action.payload);
+      })
+      .addCase(deleteTask.rejected, (state, action) => {
+        state.error = toUserErrorMessage(
+          action.error.message,
+          'Could not delete task. Please try again.'
+        );
       })
       .addCase(reorderTasks.fulfilled, state => {
         state.lastReorderRollback = null;
@@ -137,41 +167,51 @@ const tasksSlice = createSlice({
           state.lastReorderRollback = null;
         }
 
-        state.error = action.error.message ?? 'Failed to reorder tasks';
+        state.error = toUserErrorMessage(
+          action.error.message,
+          'Could not reorder tasks. Changes were reverted.'
+        );
       })
       .addCase(fetchAllTasks.pending, state => {
-        state.loading = true;
+        state.searchLoading = true;
         state.error = null;
       })
       .addCase(fetchAllTasks.fulfilled, (state, action) => {
-        state.loading = false;
+        state.searchLoading = false;
         state.allTasks = action.payload;
       })
       .addCase(fetchAllTasks.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message ?? 'Failed to fetch tasks';
+        state.searchLoading = false;
+        state.error = toUserErrorMessage(
+          action.error.message,
+          'Could not load tasks. Please try again.'
+        );
       })
       .addCase(fetchTasksByMonths.pending, (state, action) => {
-        state.loading = true;
+        state.calendarLoading = true;
         state.error = null;
         state.currentFetchRequestId = action.meta.requestId;
       })
       .addCase(fetchTasksByMonths.fulfilled, (state, action) => {
-        state.loading = false;
+        if (state.currentFetchRequestId !== action.meta.requestId) return;
+        state.calendarLoading = false;
         state.tasks = action.payload;
         state.currentFetchRequestId = null;
       })
       .addCase(fetchTasksByMonths.rejected, (state, action) => {
         if (state.currentFetchRequestId !== action.meta.requestId) return;
-        state.loading = false;
-        state.error = action.error.message ?? 'Failed to fetch tasks';
+        state.calendarLoading = false;
+        state.error = toUserErrorMessage(
+          action.error.message,
+          'Could not load tasks. Please try again.'
+        );
         state.currentFetchRequestId = null;
       });
   },
 });
 
 export default tasksSlice.reducer;
-export const { optimisticReorder } = tasksSlice.actions;
+export const { optimisticReorder, clearError } = tasksSlice.actions;
 
 export const selectFilteredTasks = createSelector(
   [

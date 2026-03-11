@@ -1,6 +1,7 @@
 import { ThemeProvider } from '@emotion/react';
 import styled from '@emotion/styled';
 import { useCallback, useEffect, useState } from 'react';
+import { Toaster } from 'sonner';
 
 import { AppHeader } from './components/AppHeader';
 import { Calendar } from './components/Calendar/Calendar';
@@ -39,6 +40,7 @@ export const App = () => {
 
   return (
     <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+      <Toaster position="top-right" />
       <GlobalStyles />
       <AppHeader isDark={isDark} onToggleTheme={toggleTheme} />
       <Container>

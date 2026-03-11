@@ -161,9 +161,7 @@ export function TaskCard({ task, onEdit, onDelete, forceDraggingCursor = false }
       </TopRow>
 
       <BottomRow>
-        <Title onPointerDown={e => e.stopPropagation()} onClick={() => onEdit(task)}>
-          {task.title}
-        </Title>
+        <Title>{task.title}</Title>
       </BottomRow>
 
       {task.priority && <PriorityBadge priority={task.priority}>{task.priority}</PriorityBadge>}

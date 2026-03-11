@@ -9,6 +9,7 @@ interface SearchResultsProps {
   tasks: Task[];
   highlightedIndex: number;
   selectedTaskId?: string | null;
+  isLoading?: boolean;
   onSelect: (task: Task) => void;
 }
 
@@ -111,6 +112,13 @@ const EmptyMessage = styled.div`
   font-size: ${({ theme }) => theme.font.size.md};
 `;
 
+const LoadingMessage = styled.div`
+  padding: 16px;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: ${({ theme }) => theme.font.size.md};
+`;
+
 const LoadMoreButton = styled.button`
   width: 100%;
   padding: 10px;
@@ -139,6 +147,7 @@ export function SearchResults({
   highlightedIndex,
   onSelect,
   selectedTaskId,
+  isLoading = false,
 }: SearchResultsProps) {
   const theme = useTheme();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -158,6 +167,14 @@ export function SearchResults({
 
   const visibleTasks = tasks.slice(0, visibleCount);
   const hasMore = visibleCount < tasks.length;
+
+  if (isLoading) {
+    return (
+      <Dropdown role="listbox" id="search-results-listbox">
+        <LoadingMessage>Searching...</LoadingMessage>
+      </Dropdown>
+    );
+  }
 
   if (tasks.length === 0) {
     return (
