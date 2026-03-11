@@ -2,7 +2,7 @@ import type { Priority, Task } from '@calendar/shared';
 import { useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
 import { Check } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { LABEL_COLORS, PRIORITY_VALUES } from '../../constants/taskMeta';
 
@@ -231,6 +231,40 @@ export function EditTaskModal({ task, dateKey: _dateKey, onSave, onClose }: Edit
   const [description, setDescription] = useState(task?.description ?? '');
   const [date, setDate] = useState(task?.date ?? '');
 
+  const trimmedTitle = title.trim();
+  const isTitleValid = trimmedTitle.length > 0;
+
+  const isDirty = useMemo(() => {
+    if (!isEdit || !task) return true;
+
+    const initialTitle = task.title.trim();
+    const currentTitle = trimmedTitle;
+
+    const initialPriority = task.priority ?? undefined;
+    const currentPriority = priority ?? undefined;
+
+    const initialDescription = (task.description ?? '').trim();
+    const currentDescription = description.trim();
+
+    const initialDate = task.date;
+    const currentDate = date;
+
+    const initialLabels = [...task.labels].sort();
+    const currentLabels = [...labels].sort();
+
+    const labelsChanged =
+      initialLabels.length !== currentLabels.length ||
+      initialLabels.some((value, index) => value !== currentLabels[index]);
+
+    return (
+      currentTitle !== initialTitle ||
+      currentPriority !== initialPriority ||
+      currentDescription !== initialDescription ||
+      currentDate !== initialDate ||
+      labelsChanged
+    );
+  }, [isEdit, task, trimmedTitle, priority, description, date, labels]);
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -248,12 +282,11 @@ export function EditTaskModal({ task, dateKey: _dateKey, onSave, onClose }: Edit
   };
 
   const handleSave = () => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
+    if (!isTitleValid) return;
     onSave(
       {
-        title: trimmed,
-        priority,
+        title: trimmedTitle,
+        priority: priority ?? undefined,
         labels,
         description: description.trim() || undefined,
         date: isEdit ? date : undefined,
@@ -338,7 +371,7 @@ export function EditTaskModal({ task, dateKey: _dateKey, onSave, onClose }: Edit
         </Section>
         <Footer>
           <CancelButton onClick={onClose}>Cancel</CancelButton>
-          <SaveButton onClick={handleSave} disabled={!title.trim()}>
+          <SaveButton onClick={handleSave} disabled={!isTitleValid || (isEdit && !isDirty)}>
             Save
           </SaveButton>
         </Footer>

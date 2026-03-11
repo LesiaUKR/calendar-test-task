@@ -156,10 +156,8 @@ export function SearchResults({
     }
   }, [highlightedIndex, visibleCount]);
 
-  const sortedTasks = [...tasks].sort((a, b) => b.date.localeCompare(a.date));
-
-  const visibleTasks = sortedTasks.slice(0, visibleCount);
-  const hasMore = visibleCount < sortedTasks.length;
+  const visibleTasks = tasks.slice(0, visibleCount);
+  const hasMore = visibleCount < tasks.length;
 
   if (tasks.length === 0) {
     return (
@@ -205,7 +203,7 @@ export function SearchResults({
       })}
       {hasMore && (
         <LoadMoreButton onClick={() => setVisibleCount(prev => prev + PAGE_SIZE)}>
-          Show more ({sortedTasks.length - visibleCount} remaining)
+          Show more ({tasks.length - visibleCount} remaining)
         </LoadMoreButton>
       )}
     </Dropdown>

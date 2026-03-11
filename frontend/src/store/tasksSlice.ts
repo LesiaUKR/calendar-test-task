@@ -8,6 +8,8 @@ export interface TasksState {
   allTasks: Task[]; // all tasks, used by search dropdown
   loading: boolean;
   error: string | null;
+  lastReorderRollback: ReorderItem[] | null;
+  currentFetchRequestId: string | null;
 }
 
 const initialState: TasksState = {
@@ -15,6 +17,8 @@ const initialState: TasksState = {
   allTasks: [],
   loading: false,
   error: null,
+  lastReorderRollback: null,
+  currentFetchRequestId: null,
 };
 
 export const fetchTasksByMonths = createAsyncThunk(
@@ -64,7 +68,7 @@ export const deleteTask = createAsyncThunk('tasks/deleteTask', async (id: string
 });
 
 export const reorderTasks = createAsyncThunk('tasks/reorderTasks', async (items: ReorderItem[]) => {
-  const { data } = await api.put<Task[]>('/tasks/reorder', items);
+  const { data } = await api.put<{ success: boolean }>('/tasks/reorder', items);
   return data;
 });
 
@@ -73,31 +77,66 @@ const tasksSlice = createSlice({
   initialState,
   reducers: {
     optimisticReorder(state, action: PayloadAction<ReorderItem[]>) {
+      const rollback: ReorderItem[] = [];
+
       for (const item of action.payload) {
         const task = state.tasks.find(t => t.id === item.id);
-        if (task) {
-          task.date = item.date;
-          task.order = item.order;
+        if (!task) continue;
+
+        rollback.push({
+          id: task.id,
+          date: task.date,
+          order: task.order,
+        });
+
+        task.date = item.date;
+        task.order = item.order;
+
+        const taskInAll = state.allTasks.find(t => t.id === item.id);
+        if (taskInAll) {
+          taskInAll.date = item.date;
+          taskInAll.order = item.order;
         }
       }
+      state.lastReorderRollback = rollback;
     },
   },
   extraReducers: builder => {
     builder
       .addCase(createTask.fulfilled, (state, action) => {
         state.tasks.push(action.payload);
+        state.allTasks.push(action.payload);
       })
       .addCase(updateTask.fulfilled, (state, action) => {
         const index = state.tasks.findIndex(t => t.id === action.payload.id);
         if (index !== -1) state.tasks[index] = action.payload;
+        const allIndex = state.allTasks.findIndex(t => t.id === action.payload.id);
+        if (allIndex !== -1) state.allTasks[allIndex] = action.payload;
       })
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.tasks = state.tasks.filter(t => t.id !== action.payload);
+        state.allTasks = state.allTasks.filter(t => t.id !== action.payload);
       })
-      .addCase(reorderTasks.fulfilled, () => {
-        // state already updated optimistically
+      .addCase(reorderTasks.fulfilled, state => {
+        state.lastReorderRollback = null;
       })
       .addCase(reorderTasks.rejected, (state, action) => {
+        if (state.lastReorderRollback) {
+          for (const item of state.lastReorderRollback) {
+            const task = state.tasks.find(t => t.id === item.id);
+            if (task) {
+              task.date = item.date;
+              task.order = item.order;
+            }
+            const taskInAll = state.allTasks.find(t => t.id === item.id);
+            if (taskInAll) {
+              taskInAll.date = item.date;
+              taskInAll.order = item.order;
+            }
+          }
+          state.lastReorderRollback = null;
+        }
+
         state.error = action.error.message ?? 'Failed to reorder tasks';
       })
       .addCase(fetchAllTasks.pending, state => {
@@ -112,17 +151,21 @@ const tasksSlice = createSlice({
         state.loading = false;
         state.error = action.error.message ?? 'Failed to fetch tasks';
       })
-      .addCase(fetchTasksByMonths.pending, state => {
+      .addCase(fetchTasksByMonths.pending, (state, action) => {
         state.loading = true;
         state.error = null;
+        state.currentFetchRequestId = action.meta.requestId;
       })
       .addCase(fetchTasksByMonths.fulfilled, (state, action) => {
         state.loading = false;
         state.tasks = action.payload;
+        state.currentFetchRequestId = null;
       })
       .addCase(fetchTasksByMonths.rejected, (state, action) => {
+        if (state.currentFetchRequestId !== action.meta.requestId) return;
         state.loading = false;
         state.error = action.error.message ?? 'Failed to fetch tasks';
+        state.currentFetchRequestId = null;
       });
   },
 });

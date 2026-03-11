@@ -1,7 +1,7 @@
 import type { Task } from '@calendar/shared';
 import styled from '@emotion/styled';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useCalendar } from '../../hooks/useCalendar';
 import type { Country } from '../../services/holidayService';
@@ -205,16 +205,19 @@ export function CalendarHeader({
   const yearOptions = yearRange.map(y => ({ value: y, label: String(y) }));
   const countryOptions = countries.map(c => ({ value: c.countryCode, label: c.name }));
 
-  const [searchValue, setSearchValue] = useState('');
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const allFetchedRef = useRef(false);
   const searchAreaRef = useRef<HTMLDivElement>(null);
 
-  const filteredTasks = useAppSelector(state => selectFilteredTasks(state, searchValue));
+  const query = useAppSelector(state => state.search.query);
+  const filteredTasks = useAppSelector(state => selectFilteredTasks(state, query));
+  const sortedFilteredTasks = useMemo(
+    () => [...filteredTasks].sort((a, b) => b.date.localeCompare(a.date)),
+    [filteredTasks]
+  );
 
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const isDropdownOpen = searchValue.trim() !== '';
+  const isDropdownOpen = query.trim() !== '';
 
   const now = new Date();
   const isTodayMonth = currentYear === now.getFullYear() && currentMonth === now.getMonth();
@@ -274,7 +277,7 @@ export function CalendarHeader({
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
-      setSearchValue(value);
+      dispatch(setQuery(value));
 
       if (value.trim() && !allFetchedRef.current) {
         dispatch(fetchAllTasks());
@@ -284,11 +287,6 @@ export function CalendarHeader({
       if (!value.trim()) {
         allFetchedRef.current = false;
       }
-
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        dispatch(setQuery(value));
-      }, 300);
     },
     [dispatch]
   );
@@ -302,19 +300,17 @@ export function CalendarHeader({
   );
 
   const handleClear = useCallback(() => {
-    setSearchValue('');
     dispatch(setQuery(''));
-    if (debounceRef.current) clearTimeout(debounceRef.current);
     allFetchedRef.current = false;
     setSelectedTaskId(null);
     setHighlightedIndex(-1);
   }, [dispatch]);
 
-  // Reset highlighted index when search value changes
+  // Reset highlighted index when query changes
   useEffect(() => {
     setHighlightedIndex(-1);
     setSelectedTaskId(null);
-  }, [searchValue]);
+  }, [query]);
 
   useEffect(() => {
     if (!isDropdownOpen) return;
@@ -347,9 +343,7 @@ export function CalendarHeader({
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Escape') {
-        setSearchValue('');
         dispatch(setQuery(''));
-        if (debounceRef.current) clearTimeout(debounceRef.current);
         return;
       }
 
@@ -357,16 +351,16 @@ export function CalendarHeader({
 
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlightedIndex(prev => Math.min(prev + 1, filteredTasks.length - 1));
+        setHighlightedIndex(prev => Math.min(prev + 1, sortedFilteredTasks.length - 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setHighlightedIndex(prev => Math.max(prev - 1, 0));
       } else if (e.key === 'Enter' && highlightedIndex >= 0) {
         e.preventDefault();
-        handleResultSelect(filteredTasks[highlightedIndex]);
+        handleResultSelect(sortedFilteredTasks[highlightedIndex]);
       }
     },
-    [dispatch, isDropdownOpen, filteredTasks, highlightedIndex, handleResultSelect]
+    [dispatch, isDropdownOpen, sortedFilteredTasks, highlightedIndex, handleResultSelect]
   );
 
   return (
@@ -421,7 +415,7 @@ export function CalendarHeader({
             <SearchInput
               type="text"
               placeholder="Search tasks..."
-              value={searchValue}
+              value={query}
               onChange={handleSearchChange}
               onKeyDown={handleSearchKeyDown}
               aria-label="Search tasks"
@@ -439,7 +433,7 @@ export function CalendarHeader({
           </InputWrapper>
           {isDropdownOpen && (
             <SearchResults
-              tasks={filteredTasks}
+              tasks={sortedFilteredTasks}
               selectedTaskId={selectedTaskId}
               highlightedIndex={highlightedIndex}
               onSelect={handleResultSelect}

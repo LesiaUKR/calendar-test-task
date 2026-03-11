@@ -66,10 +66,23 @@ export const deleteTask = async (req: Request, res: Response) => {
 };
 
 export const reorderTasks = async (req: Request, res: Response) => {
-  const items = req.body;
+  const items = req.body as { id: string; date: string; order: number }[];
+
+  const ids = items.map(item => item.id);
+  const existing = await prisma.task.findMany({
+    where: {
+      id: { in: ids },
+      userId: GUEST_USER_ID,
+    },
+    select: { id: true },
+  });
+
+  if (existing.length !== ids.length) {
+    throw new HttpError(404, 'One or more tasks not found');
+  }
 
   await prisma.$transaction(
-    items.map((item: { id: string; date: string; order: number }) =>
+    items.map(item =>
       prisma.task.update({
         where: { id: item.id },
         data: { date: item.date, order: item.order },
