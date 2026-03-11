@@ -11,12 +11,14 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import styled from '@emotion/styled';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { useCalendar } from '../../hooks/useCalendar';
 import { useHolidays } from '../../hooks/useHolidays';
 import type { Country } from '../../services/holidayService';
 import { useAppDispatch, useAppSelector } from '../../store';
 import {
+  clearError,
   createTask,
   deleteTask,
   fetchTasksByMonths,
@@ -76,13 +78,30 @@ const WeekdayCell = styled.div`
   }
 `;
 
+const GridContainer = styled.div`
+  position: relative;
+`;
+
+const GridLoadingOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${({ theme }) => `${theme.colors.background}cc`};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  font-size: ${({ theme }) => theme.font.size.md};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  pointer-events: none;
+`;
+
 const formatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
 const WEEKDAYS = Array.from({ length: 7 }, (_, i) => formatter.format(new Date(2024, 0, 7 + i)));
 
 const todayKey = formatDateKey(new Date());
 
 export function Calendar({ countries, country, onCountryChange }: CalendarProps) {
-  const { grid, currentMonth, currentYear, setCalendarMonth, setCalendarYear } = useCalendar();
+  const { grid, currentMonth, currentYear, setCalendarDate } = useCalendar();
   const [dropPreview, setDropPreview] = useState<{ dateKey: string; index: number } | null>(null);
   const [highlightedDateKey, setHighlightedDateKey] = useState<string | null>(null);
   const [editingState, setEditingState] = useState<{ task: Task | null; dateKey: string } | null>(
@@ -91,10 +110,22 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [expandedDayKey, setExpandedDayKey] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+
   const holidays = useHolidays(currentYear, country);
+
   const tasks = useAppSelector(state => state.tasks.tasks);
+  const loading = useAppSelector(state => state.tasks.calendarLoading);
+  const taskError = useAppSelector(state => state.tasks.error);
 
   const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    if (!taskError) return;
+    toast.error(taskError, {
+      style: { color: '#dc2626' },
+    });
+    dispatch(clearError());
+  }, [taskError, dispatch]);
 
   useEffect(() => {
     const formatMonth = (date: Date) =>
@@ -318,11 +349,10 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
     (task: Task, dateKey: string) => {
       const year = parseInt(task.date.slice(0, 4));
       const month = parseInt(task.date.slice(5, 7)) - 1;
-      setCalendarMonth(month);
-      setCalendarYear(year);
+      setCalendarDate(year, month);
       setHighlightedDateKey(dateKey);
     },
-    [setCalendarMonth, setCalendarYear]
+    [setCalendarDate]
   );
 
   return (
@@ -346,32 +376,35 @@ export function Calendar({ countries, country, onCountryChange }: CalendarProps)
               <WeekdayCell key={day}>{day}</WeekdayCell>
             ))}
           </WeekdaysGrid>
-          <DaysGrid>
-            {grid.map(week =>
-              week.map(date => {
-                const key = formatDateKey(date);
-                const isBoundary = date.getMonth() !== currentMonth;
-                const isToday = key === todayKey;
+          <GridContainer>
+            {loading && <GridLoadingOverlay>Loading tasks...</GridLoadingOverlay>}
+            <DaysGrid>
+              {grid.map(week =>
+                week.map(date => {
+                  const key = formatDateKey(date);
+                  const isBoundary = date.getMonth() !== currentMonth;
+                  const isToday = key === todayKey;
 
-                return (
-                  <DayCell
-                    key={key}
-                    date={date}
-                    isBoundary={isBoundary}
-                    isToday={isToday}
-                    tasks={tasksByDate.get(key) ?? []}
-                    holidays={holidays.get(key) ?? []}
-                    onAddTask={handleAddTask}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onOpenDayTasks={handleOpenDayTasks}
-                    isSearchHighlighted={highlightedDateKey === key}
-                    dropPreviewIndex={dropPreview?.dateKey === key ? dropPreview.index : null}
-                  />
-                );
-              })
-            )}
-          </DaysGrid>
+                  return (
+                    <DayCell
+                      key={key}
+                      date={date}
+                      isBoundary={isBoundary}
+                      isToday={isToday}
+                      tasks={tasksByDate.get(key) ?? []}
+                      holidays={holidays.get(key) ?? []}
+                      onAddTask={handleAddTask}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onOpenDayTasks={handleOpenDayTasks}
+                      isSearchHighlighted={highlightedDateKey === key}
+                      dropPreviewIndex={dropPreview?.dateKey === key ? dropPreview.index : null}
+                    />
+                  );
+                })
+              )}
+            </DaysGrid>
+          </GridContainer>
         </Wrapper>
         <DragOverlay>
           {activeTask ? (

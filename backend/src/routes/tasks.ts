@@ -8,6 +8,7 @@ import {
   updateTask,
 } from '../controllers/taskController';
 import ctrlWrapper from '../middleware/ctrlWrapper';
+import { writeLimiter } from '../middleware/rateLimit';
 import validateBody from '../middleware/validateBody';
 import { createTaskSchema, reorderSchema, updateTaskSchema } from '../schemas/taskSchemas';
 
@@ -15,12 +16,12 @@ const tasksRouter = Router();
 
 tasksRouter.get('/', ctrlWrapper(getTasks));
 
-tasksRouter.post('/', validateBody(createTaskSchema), ctrlWrapper(createTask));
+tasksRouter.post('/', writeLimiter, validateBody(createTaskSchema), ctrlWrapper(createTask));
 
-tasksRouter.put('/reorder', validateBody(reorderSchema), ctrlWrapper(reorderTasks));
+tasksRouter.put('/reorder', writeLimiter, validateBody(reorderSchema), ctrlWrapper(reorderTasks));
 
-tasksRouter.patch('/:id', validateBody(updateTaskSchema), ctrlWrapper(updateTask));
+tasksRouter.patch('/:id', writeLimiter, validateBody(updateTaskSchema), ctrlWrapper(updateTask));
 
-tasksRouter.delete('/:id', ctrlWrapper(deleteTask));
+tasksRouter.delete('/:id', writeLimiter, ctrlWrapper(deleteTask));
 
 export default tasksRouter;
