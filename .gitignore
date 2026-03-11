@@ -158,5 +158,5 @@ generated/
 # TypeScript build info
 *.tsbuildinfo
 
-# Shared dist — tracked (needed for Vercel deploy)
-!shared/dist/
+# Shared dist
+shared/dist

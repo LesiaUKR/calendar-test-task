@@ -1,5 +1,6 @@
-import { ALLOWED_LABEL_COLORS } from '@calendar/shared';
 import { z } from 'zod';
+
+import { ALLOWED_LABEL_COLORS } from '../constants/labelColors';
 
 export const createTaskSchema = z.object({
   title: z.string().trim().min(1).max(255),

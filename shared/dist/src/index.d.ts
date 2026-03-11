@@ -1,6 +1,4 @@
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-export declare const ALLOWED_LABEL_COLORS: readonly ["#34d399", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#ef4444"];
-export type LabelColor = (typeof ALLOWED_LABEL_COLORS)[number];
 export interface Task {
     id: string;
     title: string;
